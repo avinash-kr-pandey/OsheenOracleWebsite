@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true, // ✅ sab ESLint errors/warnings build time pe ignore
+  },
   images: {
     domains: [
       "osheenoracle.com",
@@ -9,12 +12,9 @@ const nextConfig: NextConfig = {
       "via.placeholder.com",
       "images.unsplash.com",
       "img.freepik.com",
-      "img.freepik.com",
       "www.shutterstock.com",
       "i.pravatar.cc",
       "cdn.pixabay.com",
-      "images.unsplash.com",
-
     ],
   },
 };

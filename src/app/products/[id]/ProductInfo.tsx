@@ -6,12 +6,11 @@ import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { Product } from "@/types/product";
 
-
 interface ProductInfoProps {
-  product: Product; // ✅ Use shared Product type
+  product: Product;
 }
 
-// Custom hook for image preloading
+// Custom hook को component के बाहर रखें
 const useImagePreloader = (imageUrls: string[]) => {
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
 
@@ -44,7 +43,39 @@ const useImagePreloader = (imageUrls: string[]) => {
 };
 
 export default function ProductInfo({ product }: ProductInfoProps) {
-  // ✅ Safety checks for product data
+  // ✅ STEP 1: सभी hooks को TOP LEVEL पर call करें (किसी भी condition से पहले)
+  const [selectedImage, setSelectedImage] = useState<string>("/placeholder.jpg");
+  const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>(""); // Warning: इसका use नहीं हो रहा
+  const [quantity, setQuantity] = useState<number>(1);
+  const [activeTab, setActiveTab] = useState<string>("description");
+  const [showZoom, setShowZoom] = useState<boolean>(false);
+  const [zoomPosition, setZoomPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  
+  const imageRef = useRef<HTMLDivElement>(null);
+  
+  const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+
+  // ✅ STEP 2: useMemo भी top level पर
+  const allImages = useMemo(() => {
+    if (!product) return ["/placeholder.jpg"];
+    const mainImage = product?.image || "/placeholder.jpg";
+    const additionalImages = product?.images || [];
+    return Array.from(new Set([mainImage, ...additionalImages]));
+  }, [product]);
+
+  // ✅ STEP 3: Custom hook भी top level पर
+  const loadedImages = useImagePreloader(allImages);
+
+  // ✅ STEP 4: Initial image selection के लिए useEffect
+  useEffect(() => {
+    if (product?.image) {
+      setSelectedImage(product.image);
+    }
+  }, [product]);
+
+  // ✅ STEP 5: अब early return करें (सभी hooks call होने के बाद)
   if (!product) {
     console.error("❌ ProductInfo: No product data provided");
     return (
@@ -59,31 +90,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     );
   }
 
-  const [selectedImage, setSelectedImage] = useState(product.image || "/placeholder.jpg");
-  const [selectedSize, setSelectedSize] = useState("");
-  const [selectedColor, setSelectedColor] = useState("");
-  const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState("description");
-  const [showZoom, setShowZoom] = useState(false);
-  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
-  const imageRef = useRef<HTMLDivElement>(null);
-
-  const { addToCart } = useCart();
-  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-
-  // Combine main image with images array and memoize
-  const allImages = useMemo(
-    () => {
-      const mainImage = product?.image || "/placeholder.jpg";
-      const additionalImages = product?.images || [];
-      return Array.from(new Set([mainImage, ...additionalImages]));
-    },
-    [product?.image, product?.images]
-  );
-
-  // Preload all images
-  const loadedImages = useImagePreloader(allImages);
-
+  // ✅ STEP 6: अब बाकी functions define करें
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!imageRef.current || !showZoom) return;
 
@@ -92,7 +99,6 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     const x = ((e.clientX - left) / width) * 100;
     const y = ((e.clientY - top) / height) * 100;
 
-    // Limit the position to stay within image bounds
     const boundedX = Math.max(0, Math.min(100, x));
     const boundedY = Math.max(0, Math.min(100, y));
 
@@ -100,7 +106,6 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   };
 
   const handleMouseEnter = () => {
-    // Only show zoom if the current image is loaded
     if (loadedImages.has(selectedImage)) {
       setShowZoom(true);
     }
@@ -112,41 +117,36 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
   const handleImageSelect = (img: string) => {
     setSelectedImage(img);
-    // Reset zoom when changing image
     setShowZoom(false);
   };
 
-// ProductInfo.tsx mein yeh functions update karo:
+  const handleAddToCart = () => {
+    if (product.size && product.size.length > 0 && !selectedSize) {
+      alert("Please select a size");
+      return;
+    }
 
-const handleAddToCart = () => {
-  if (product.size && product.size.length > 0 && !selectedSize) {
-    alert("Please select a size");
-    return;
-  }
+    if (product.color && product.color.length > 0 && !selectedColor) {
+      alert("Please select a color");
+      return;
+    }
 
-  if (product.color && product.color.length > 0 && !selectedColor) {
-    alert("Please select a color");
-    return;
-  }
+    const cartItem = {
+      id: product.id,
+      name: product.name || "Unknown Product",
+      price: product.price || 0,
+      image: product.image || "/placeholder.jpg",
+      quantity: quantity,
+      size: selectedSize,
+      color: selectedColor,
+    };
 
-  const cartItem = {
-    id: product.id, // ✅ Yeh as it is rahega (string | number)
-    name: product.name || "Unknown Product",
-    price: product.price || 0,
-    image: product.image || "/placeholder.jpg",
-    quantity: quantity,
-    size: selectedSize,
-    color: selectedColor,
+    addToCart(cartItem);
+    alert("Product added to cart successfully!");
   };
-
-  addToCart(cartItem);
-  alert("Product added to cart successfully!");
-};
-
 
   const handleBuyNow = () => {
     handleAddToCart();
-    // Redirect to cart page
     window.location.href = "/cart";
   };
 
@@ -185,25 +185,19 @@ const handleAddToCart = () => {
     ));
   };
 
+  // ✅ STEP 7: Rest of your component JSX
   const discountPrice = (product.price || 0) * 1.2;
-
-  // Dynamic data from product features
   const features = product.features || {
     freeShipping: true,
     warranty: "2 Year Warranty",
     authentic: true,
   };
-
   const shippingInfo = product.shippingInfo || {
     delivery: "Delivery in 2-3 days",
     securePayment: true,
   };
-
-  // Calculate reviews count and percentages
   const reviewsCount = product.reviews?.length || 128;
   const averageRating = product.rating || 0;
-
-  // Check if current image is loaded
   const isCurrentImageLoaded = loadedImages.has(selectedImage);
 
   return (
