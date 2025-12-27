@@ -14,13 +14,14 @@ const Wishlist: React.FC = () => {
   const { wishlistItems, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
 
+  // ✅ id ko number me accept kar rahe hain
   const handleRemove = (id: number) => {
     removeFromWishlist(id);
   };
 
   const handleAddToCart = (item: WishlistItem) => {
     addToCart({
-      id: item.id,
+      id: Number(item.id), // ✅ safe conversion
       name: item.name,
       price: item.price,
       image: item.image,
@@ -34,12 +35,13 @@ const Wishlist: React.FC = () => {
   };
 
   return (
-    <div className="pt-32 min-h-screen  py-10 px-4 sm:px-10"
-    
-     style={{
+    <div
+      className="pt-32 min-h-screen py-10 px-4 sm:px-10"
+      style={{
         background:
           "linear-gradient(to bottom, #FBB5E7 0%, #FBB5E7 20%, #C4F9FF 100%)",
-      }}>
+      }}
+    >
       <h1 className="text-3xl font-bold text-center mb-10 text-pink-700">
         My Wishlist <FaHeart className="inline ml-2 text-pink-600" />
       </h1>
@@ -83,6 +85,7 @@ const Wishlist: React.FC = () => {
                 >
                   View
                 </button>
+
                 <button
                   disabled={!item.inStock}
                   onClick={() => handleAddToCart(item)}
@@ -95,8 +98,10 @@ const Wishlist: React.FC = () => {
                   <FaShoppingCart className="inline mr-1" />
                   Add to Cart
                 </button>
+
+                {/* ✅ MAIN FIX HERE */}
                 <button
-                  onClick={() => handleRemove(item.id)}
+                  onClick={() => handleRemove(Number(item.id))}
                   className="px-3 py-2 bg-pink-100 hover:bg-pink-200 text-pink-600 rounded-xl text-sm shadow-md transition-all"
                 >
                   <FaTrash />
@@ -108,8 +113,8 @@ const Wishlist: React.FC = () => {
           <div className="text-center text-gray-500 py-16">
             <FaHeartBroken className="text-4xl mx-auto mb-3 text-pink-400" />
             <p className="text-lg">Your wishlist is empty 💔</p>
-            <button 
-              onClick={() => window.location.href = "/products"}
+            <button
+              onClick={() => (window.location.href = "/products")}
               className="mt-5 bg-pink-600 text-white px-6 py-2 rounded-full hover:bg-pink-700 shadow-md transition-all"
             >
               Start Shopping
