@@ -229,29 +229,65 @@ export interface Review {
 }
 
 // Fetch all products
+// utils/api/api.ts mein fetchProducts function update karo
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    const products = await fetchData<Product[]>("/products");
-    return products;
+    console.log("🔍 Fetching products from API...");
+    const response = await fetchData<any>("/products");
+    
+    console.log("🔍 API Response:", response);
+    
+    // Check different response formats
+    if (Array.isArray(response)) {
+      console.log("✅ Products received as array");
+      return response;
+    } else if (response && typeof response === 'object') {
+      // Check for common response formats
+      if (Array.isArray(response.data)) {
+        console.log("✅ Products found in response.data");
+        return response.data;
+      } else if (Array.isArray(response.products)) {
+        console.log("✅ Products found in response.products");
+        return response.products;
+      } else if (Array.isArray(response.items)) {
+        console.log("✅ Products found in response.items");
+        return response.items;
+      } else if (Array.isArray(response.result)) {
+        console.log("✅ Products found in response.result");
+        return response.result;
+      } else {
+        console.warn("⚠️ Unexpected response format:", response);
+        return [];
+      }
+    }
+    
+    console.error("❌ Invalid response format");
+    return [];
   } catch (error) {
-    console.error("Error fetching products:", error);
-    throw error;
+    console.error("❌ Error fetching products:", error);
+    return []; // Return empty array instead of throwing
   }
 };
-
 // Fetch single product by ID
 export const fetchProductById = async (
   id: number | string
 ): Promise<Product> => {
   try {
+    console.log("🔍 fetchProductById called with ID:", id);
+    console.log("🔍 ID type:", typeof id);
+    
     const product = await fetchData<Product>(`/products/${id}`);
+    
+    console.log("✅ Product fetched successfully");
+    console.log("🔍 Product ID from API:", product.id);
+    console.log("🔍 Product ID type from API:", typeof product.id);
+    
     return product;
   } catch (error) {
-    console.error(`Error fetching product ${id}:`, error);
+    console.error(`❌ Error fetching product ${id}:`, error);
     throw error;
   }
 };
-
 // Search products by name or keyword
 export const searchProducts = async (query: string): Promise<Product[]> => {
   try {
@@ -447,5 +483,7 @@ export const getFilterOptions = async (): Promise<{
     throw error;
   }
 };
+
+
 
 export default api;

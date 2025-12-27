@@ -4,43 +4,11 @@ import Image from "next/image";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { Product } from "@/types/product";
 
-interface Review {
-  name: string;
-  comment: string;
-  rating: number;
-  date: string;
-  avatar: string;
-}
-
-interface Product {
-  id: number;
-  name: string;
-  brand: string;
-  category: string;
-  image: string;
-  images: string[];
-  isNew: boolean;
-  price: number;
-  rating: number;
-  gender: string[];
-  size?: string[];
-  description?: string;
-  color?: string[];
-  reviews?: Review[];
-  features?: {
-    freeShipping: boolean;
-    warranty: string;
-    authentic: boolean;
-  };
-  shippingInfo?: {
-    delivery: string;
-    securePayment: boolean;
-  };
-}
 
 interface ProductInfoProps {
-  product: Product;
+  product: Product; // ✅ Use shared Product type
 }
 
 // Custom hook for image preloading
@@ -75,9 +43,23 @@ const useImagePreloader = (imageUrls: string[]) => {
   return loadedImages;
 };
 
-
 export default function ProductInfo({ product }: ProductInfoProps) {
-  const [selectedImage, setSelectedImage] = useState(product.image);
+  // ✅ Safety checks for product data
+  if (!product) {
+    console.error("❌ ProductInfo: No product data provided");
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#C4F9FF]">
+        <div className="text-center">
+          <div className="text-5xl mb-4">😔</div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            Product not found
+          </h3>
+        </div>
+      </div>
+    );
+  }
+
+  const [selectedImage, setSelectedImage] = useState(product.image || "/placeholder.jpg");
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -91,8 +73,12 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
   // Combine main image with images array and memoize
   const allImages = useMemo(
-    () => Array.from(new Set([product.image, ...(product.images || [])])),
-    [product.image, product.images]
+    () => {
+      const mainImage = product?.image || "/placeholder.jpg";
+      const additionalImages = product?.images || [];
+      return Array.from(new Set([mainImage, ...additionalImages]));
+    },
+    [product?.image, product?.images]
   );
 
   // Preload all images
@@ -130,32 +116,33 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     setShowZoom(false);
   };
 
-  const handleAddToCart = () => {
-    if (product.size && product.size.length > 0 && !selectedSize) {
-      alert("Please select a size");
-      return;
-    }
+// ProductInfo.tsx mein yeh functions update karo:
 
-    if (product.color && product.color.length > 0 && !selectedColor) {
-      alert("Please select a color");
-      return;
-    }
+const handleAddToCart = () => {
+  if (product.size && product.size.length > 0 && !selectedSize) {
+    alert("Please select a size");
+    return;
+  }
 
-    const cartItem = {
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      quantity: quantity,
-      size: selectedSize,
-      color: selectedColor,
-    };
+  if (product.color && product.color.length > 0 && !selectedColor) {
+    alert("Please select a color");
+    return;
+  }
 
-    addToCart(cartItem);
-
-    // Show confirmation
-    alert("Product added to cart successfully!");
+  const cartItem = {
+    id: product.id, // ✅ Yeh as it is rahega (string | number)
+    name: product.name || "Unknown Product",
+    price: product.price || 0,
+    image: product.image || "/placeholder.jpg",
+    quantity: quantity,
+    size: selectedSize,
+    color: selectedColor,
   };
+
+  addToCart(cartItem);
+  alert("Product added to cart successfully!");
+};
+
 
   const handleBuyNow = () => {
     handleAddToCart();
@@ -166,9 +153,9 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   const handleWishlistToggle = () => {
     const wishlistItem = {
       id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
+      name: product.name || "Unknown Product",
+      price: product.price || 0,
+      image: product.image || "/placeholder.jpg",
       inStock: true,
     };
 
@@ -198,7 +185,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     ));
   };
 
-  const discountPrice = product.price * 1.2;
+  const discountPrice = (product.price || 0) * 1.2;
 
   // Dynamic data from product features
   const features = product.features || {
@@ -214,7 +201,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
   // Calculate reviews count and percentages
   const reviewsCount = product.reviews?.length || 128;
-  const averageRating = product.rating;
+  const averageRating = product.rating || 0;
 
   // Check if current image is loaded
   const isCurrentImageLoaded = loadedImages.has(selectedImage);
@@ -275,7 +262,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                   >
                     <Image
                       src={selectedImage}
-                      alt={product.name}
+                      alt={product.name || "Product"}
                       fill
                       className={`object-cover transition-opacity duration-500 ${
                         isCurrentImageLoaded ? "opacity-100" : "opacity-0"
@@ -336,9 +323,9 @@ export default function ProductInfo({ product }: ProductInfoProps) {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="bg-pink-500/10 text-pink-700 px-3 py-1 rounded-full text-xs font-bold border border-pink-200">
-                    {product.category}
+                    {product.category || "Uncategorized"}
                   </span>
-                  {product.gender.map((gen) => (
+                  {product.gender?.map((gen) => (
                     <span
                       key={gen}
                       className="bg-blue-500/10 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-200"
@@ -348,22 +335,22 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                   ))}
                 </div>
                 <p className="text-blue-600 font-semibold text-sm tracking-wide">
-                  {product.brand}
+                  {product.brand || "Unknown Brand"}
                 </p>
               </div>
 
               {/* Product Name */}
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
-                {product.name}
+                {product.name || "Product Name"}
               </h1>
 
               {/* Rating */}
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1 bg-white px-3 py-1 rounded-full shadow-sm">
-                  {renderStars(product?.rating)}
+                  {renderStars(product.rating || 0)}
                 </div>
                 <span className="text-gray-700 font-medium text-sm">
-                  {product?.rating}/5
+                  {product.rating || 0}/5
                 </span>
                 <span className="text-gray-400">•</span>
                 <span className="text-gray-600 text-sm">
@@ -375,7 +362,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   <p className="text-3xl font-bold text-gray-900">
-                    Rs. {product.price.toFixed(2)}
+                    Rs. {(product.price || 0).toFixed(2)}
                   </p>
                   <p className="text-xl text-gray-500 line-through">
                     Rs. {discountPrice.toFixed(2)}
@@ -394,50 +381,6 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                 {product.description ||
                   "Premium quality product designed for ultimate comfort and style. Crafted with sustainable materials and exceptional attention to detail."}
               </p>
-
-              {/* Color Selection */}
-              {/* {product.color && product.color.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-900 text-sm">
-                      COLOR:
-                    </h3>
-                    {selectedColor ? (
-                      <span className="flex items-center gap-2 text-pink-600 font-medium text-sm">
-                        <span
-                          className="inline-block w-4 h-4 rounded-full border border-gray-300"
-                          style={{
-                            backgroundColor: selectedColor.toLowerCase(),
-                          }}
-                        ></span>
-                        {selectedColor}
-                      </span>
-                    ) : (
-                      <span className="text-gray-500 text-sm">
-                        Select Color
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 flex-wrap">
-                    {product.color.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setSelectedColor(color)}
-                        className={`w-8 h-8 rounded-full border-2 transition-all duration-200 shadow-sm ${
-                          selectedColor === color
-                            ? "border-pink-500 ring-2 ring-pink-200 scale-110"
-                            : "border-gray-300 hover:border-pink-300 hover:scale-105"
-                        }`}
-                        style={{
-                          backgroundColor: color.toLowerCase(),
-                        }}
-                        title={color}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )} */}
 
               {/* Size Selection */}
               {product.size && product.size.length > 0 && (
@@ -641,14 +584,14 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                     <div className="space-y-3 text-sm sm:text-base">
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <span className="font-medium text-gray-600">Brand</span>
-                        <span className="text-gray-900">{product.brand}</span>
+                        <span className="text-gray-900">{product.brand || "Unknown"}</span>
                       </div>
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <span className="font-medium text-gray-600">
                           Category
                         </span>
                         <span className="text-gray-900">
-                          {product.category}
+                          {product.category || "Uncategorized"}
                         </span>
                       </div>
                       <div className="flex justify-between border-b border-gray-100 pb-2">
@@ -656,7 +599,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                           Gender
                         </span>
                         <span className="text-gray-900">
-                          {product.gender.join(", ")}
+                          {product.gender?.join(", ") || "Not specified"}
                         </span>
                       </div>
                     </div>
@@ -693,7 +636,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <span className="font-medium text-gray-600">SKU</span>
                         <span className="text-gray-900">
-                          PRD-{product.id.toString().padStart(6, "0")}
+                          PRD-{String(product.id).padStart(6, "0")}
                         </span>
                       </div>
                     </div>

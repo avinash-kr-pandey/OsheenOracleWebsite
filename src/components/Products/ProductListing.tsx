@@ -4,42 +4,8 @@ import Products from "./Products";
 import Filters from "./Filters";
 import CommonPageHeader from "../CommonPages/CommonPageHeader";
 import { fetchProducts } from "@/utils/api/api";
+import { Product } from "@/types/product";
 
-export interface Review {
-  name: string;
-  comment: string;
-  rating: number;
-  date: string;
-  avatar: string;
-}
-
-export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  image: string;
-  images: string[];
-  category: string;
-  brand: string;
-  gender: string[];
-  isNew: boolean;
-  rating: number;
-  size?: string[];
-  color?: string[];
-  description?: string;
-  reviews?: Review[];
-  features?: {
-    freeShipping: boolean;
-    returns: string;
-    warranty: string;
-    authentic: boolean;
-  };
-  shippingInfo?: {
-    delivery: string;
-    returnPolicy: string;
-    securePayment: boolean;
-  };
-}
 
 const ProductListing: React.FC = () => {
   // State for all products from API
@@ -53,12 +19,8 @@ const ProductListing: React.FC = () => {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedProductCatalogues, setSelectedProductCatalogues] = useState<
-    string[]
-  >([]);
-  const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>(
-    []
-  );
+  const [selectedProductCatalogues, setSelectedProductCatalogues] = useState<string[]>([]);
+  const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>([]);
   const [sortOption, setSortOption] = useState<string>("newest");
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
@@ -69,35 +31,31 @@ const ProductListing: React.FC = () => {
         setLoading(true);
         setError(null);
 
+        console.log("🔄 Fetching products from API...");
         const response = await fetchProducts();
 
-        console.log("API Response:", response); // ✅ Debug log
+        console.log("📦 API Response:", response);
 
-        // ✅ SAFETY: always convert to array with ID validation
+        // ✅ Handle both _id and id from backend
         let productList: Product[] = [];
 
         if (Array.isArray(response)) {
           productList = response;
         } else if (response && typeof response === "object") {
-          // Check common response patterns
           const responseObj = response as Record<string, unknown>;
           if (Array.isArray(responseObj.data)) {
             productList = responseObj.data;
           } else if (Array.isArray(responseObj.products)) {
             productList = responseObj.products;
-          } else if (Array.isArray(responseObj.items)) {
-            productList = responseObj.items;
-          } else if (Array.isArray(responseObj.result)) {
-            productList = responseObj.result;
           }
         }
 
-        // ✅ Validate and fix IDs if missing
+        // ✅ Transform backend data to match frontend interface
         productList = productList.map((product, index) => {
           // If product doesn't exist, return empty object
           if (!product || typeof product !== "object") {
             return {
-              id: index + 1,
+              id: String(index + 1),
               name: "Unknown Product",
               price: 0,
               image: "/placeholder.jpg",
@@ -110,24 +68,36 @@ const ProductListing: React.FC = () => {
             } as Product;
           }
 
-          // If ID is missing, generate one
-          if (!product.id || product.id === undefined || product.id === null) {
-            console.warn(`Product missing ID at index ${index}:`, product);
-            return {
-              ...product,
-              id: index + 1, // Generate ID
-            };
-          }
+          // ✅ Use _id from MongoDB as primary id if available
+          const productId = (product as any)._id || product.id || String(index + 1);
+          
+          // Log for debugging
+          console.log(`Product ${index}:`, {
+            original_id: product.id,
+            original__id: (product as any)._id,
+            final_id: productId,
+            name: product.name
+          });
 
-          return product;
+          return {
+            ...product,
+            id: productId, // ✅ Use _id if available
+            _id: (product as any)._id, // ✅ Keep _id
+          } as Product;
         });
 
-        console.log("Processed Products:", productList); // ✅ Debug
+        console.log("✅ Processed Products:", productList);
+        console.log("✅ First product details:", {
+          id: productList[0]?.id,
+          _id: productList[0]?._id,
+          type: typeof productList[0]?.id
+        });
+        
         setAllProducts(productList);
       } catch (error) {
         console.error("Error loading products:", error);
         setError("Failed to load products. Please try again.");
-        setAllProducts([]); // Set empty array on error
+        setAllProducts([]);
       } finally {
         setLoading(false);
       }
@@ -170,13 +140,9 @@ const ProductListing: React.FC = () => {
     if (!Array.isArray(allProducts)) return [];
 
     const filtered = allProducts.filter((product) => {
-      // Safety check
       if (!product) return false;
-
-      // Price filter
       if (product.price > priceRange) return false;
-
-      // Gender filter
+      
       if (
         selectedGenders.length > 0 &&
         (!product.gender ||
@@ -184,18 +150,15 @@ const ProductListing: React.FC = () => {
       )
         return false;
 
-      // Brand filter
       if (selectedBrands.length > 0 && !selectedBrands.includes(product.brand))
         return false;
 
-      // Size filter
       if (
         selectedSizes.length > 0 &&
         (!product.size || !product.size.some((s) => selectedSizes.includes(s)))
       )
         return false;
 
-      // Category filter
       if (
         selectedCategories.length > 0 &&
         !selectedCategories.includes(product.category)
@@ -220,7 +183,6 @@ const ProductListing: React.FC = () => {
         filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         break;
       default:
-        // Default sorting (newest first)
         filtered.sort((a, b) => (a.isNew === b.isNew ? 0 : a.isNew ? -1 : 1));
     }
 
@@ -235,7 +197,7 @@ const ProductListing: React.FC = () => {
     sortOption,
   ]);
 
-  // Handlers
+  // Handlers (unchanged)
   const handleGenderChange = (gender: string) => {
     setSelectedGenders((prev) =>
       prev.includes(gender)
@@ -390,7 +352,6 @@ const ProductListing: React.FC = () => {
               selectedSubCategories={selectedSubCategories}
               onSubCategoryChange={handleSubCategoryChange}
               onClearFilters={clearAllFilters}
-              // Pass dynamic data to Filters component
               availableBrands={uniqueBrands}
               availableCategories={uniqueCategories}
               availableGenders={uniqueGenders}

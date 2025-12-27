@@ -80,39 +80,44 @@ const SliderRow = ({ rowData }: { rowData: typeof zodiacData }) => {
               key={i}
               className="card flex-shrink-0 rounded-2xl transition-all bg-white overflow-hidden
                          shadow-md hover:shadow-xl duration-300
-                         w-[70vw] sm:w-[260px]"
+                         w-[260px] sm:w-[280px] lg:w-[300px] h-[480px] flex flex-col"
             >
-              {/* Image */}
-              <div className="relative w-full h-[260px] sm:h-[330px] overflow-hidden">
+              {/* Image - Fixed height */}
+              <div className="relative w-full h-[200px] overflow-hidden flex-shrink-0">
                 <Image
-                  src={zodiac.image}
+                  src={zodiac?.image}
                   alt={zodiac.name}
                   fill
                   className="object-cover transform transition-transform duration-500 hover:scale-105"
                 />
               </div>
 
-              {/* Text */}
-              <div className="text-center py-6 px-4">
+              {/* Text content with flex grow to fill space */}
+              <div className="flex flex-col flex-grow p-4">
                 <h3
-                  className="text-lg sm:text-xl font-semibold text-[#3D2E4F]"
+                  className="text-lg sm:text-xl font-semibold text-[#3D2E4F] mb-3"
                   style={{ fontFamily: "var(--font-montserrat)" }}
                 >
                   {zodiac.name}
                 </h3>
 
-                <p className="mt-3 text-sm text-gray-600">
-                  {zodiac.description}
-                </p>
+                <div className="flex-grow">
+                  <p className="text-sm text-gray-600 line-clamp-4">
+                    {zodiac.description}
+                  </p>
+                </div>
 
-                <button
-                  onClick={() => router.push(`/booking/${zodiac.id}`)}
-                  className="mt-5 bg-black text-white text-sm font-medium py-2 px-6 
-                             rounded-full hover:bg-gray-800 transition-all cursor-pointer"
-                  style={{ fontFamily: "var(--font-montserrat)" }}
-                >
-                  Book Now
-                </button>
+                {/* Button always at bottom */}
+                <div className="mt-auto pt-4">
+                  <button
+                    onClick={() => router.push(`/booking/${zodiac.id}`)}
+                    className="w-full bg-black text-white text-sm font-medium py-2 px-6 
+                               rounded-full hover:bg-gray-800 transition-all cursor-pointer"
+                    style={{ fontFamily: "var(--font-montserrat)" }}
+                  >
+                    Book Now
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -149,7 +154,7 @@ const Catalogue = () => {
         onClick={() => router.push("/cataloguedetails")}
         className="mt-2 px-8 py-2 border border-[#3D2E4F] text-[#3D2E4F] rounded-full 
                    font-medium text-base hover:bg-[#3D2E4F] hover:text-white 
-                   transition-all duration-300 cursor-pointer mb-10 sm:mb-14"
+                   transition-all duration-300 cursor-pointer mb-10 sm:mb-14 block mx-auto"
       >
         View All
       </button>

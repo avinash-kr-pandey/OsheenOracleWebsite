@@ -1,8 +1,9 @@
 "use client";
 import Image from "next/image";
 import React, { useState, useRef, useEffect } from "react";
-import { Product } from "./ProductListing";
+
 import Link from "next/link";
+import { Product } from "@/types/product";
 
 interface ProductsProps {
   products: Product[];
@@ -27,20 +28,31 @@ const Products: React.FC<ProductsProps> = ({
 
   // ✅ Initialize with safe products
   useEffect(() => {
-    console.log("Products received in Products component:", products);
+    console.log("📦 Products received in Products component:", products);
 
-    // Validate and filter products
+    // Validate and filter products - check for both id and _id
     const validProducts = Array.isArray(products)
       ? products.filter(
           (product) =>
             product &&
             typeof product === "object" &&
-            product.id !== undefined &&
-            product.id !== null
+            (product.id !== undefined || product._id !== undefined) // ✅ Check both
         )
       : [];
 
-    console.log("Valid products count:", validProducts.length);
+    console.log("✅ Valid products count:", validProducts.length);
+    
+    // Debug first product
+    if (validProducts.length > 0) {
+      console.log("🔍 First product details:", {
+        id: validProducts[0].id,
+        _id: validProducts[0]._id,
+        name: validProducts[0].name,
+        hasId: !!validProducts[0].id,
+        has_Id: !!validProducts[0]._id
+      });
+    }
+    
     setFilteredProducts(validProducts);
   }, [products]);
 
@@ -272,12 +284,27 @@ const Products: React.FC<ProductsProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProducts.map((item, index) => {
             // ✅ Final safety check before rendering
-            if (!item || !item.id) {
+            if (!item) {
               console.warn(`Invalid product at index ${index}:`, item);
               return null;
             }
 
-            const productId = item.id;
+            // ✅ FIXED: Use _id if available, otherwise use id (both are strings)
+            const productId = item._id || item.id || `temp-${index}`;
+            
+            console.log(`🔗 Product ${index}:`, {
+              name: item.name,
+              id: item.id,
+              _id: item._id,
+              finalId: productId,
+              idType: typeof item.id,
+              _idType: typeof item._id
+            });
+
+            if (!productId) {
+              console.error(`❌ Product at index ${index} has no ID:`, item);
+              return null;
+            }
 
             return (
               <Link

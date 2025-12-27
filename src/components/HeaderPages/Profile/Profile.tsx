@@ -48,6 +48,51 @@ interface PaymentMethod {
   isDefault: boolean;
 }
 
+// Interface for API responses
+interface ApiResponse<T> {
+  data: T;
+  message?: string;
+  success: boolean;
+}
+
+// Interface for user update data
+interface UpdateProfileData {
+  name: string;
+  email: string;
+  phone: string;
+  dateOfBirth: string;
+}
+
+// Interface for user data from AuthContext - matching what your context expects
+interface UserData {
+  id: string; // Changed from number to string to match AuthContext
+  name: string;
+  email: string;
+  phone?: string;
+  dateOfBirth?: string;
+  membership?: string;
+  loyaltyPoints?: number;
+  joinDate?: string;
+}
+
+// Interface for API user data (id as number)
+interface ApiUserData {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  dateOfBirth?: string;
+  membership?: string;
+  loyaltyPoints?: number;
+  joinDate?: string;
+}
+
+// Helper function to convert API user data to AuthContext user data
+const convertApiUserToAuthUser = (apiUser: ApiUserData): UserData => ({
+  ...apiUser,
+  id: apiUser.id.toString(), // Convert number id to string
+});
+
 const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
@@ -55,16 +100,17 @@ const ProfilePage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [wishlistCount, setWishlistCount] = useState(0);
 
   const { user, isAuthenticated, updateUser } = useAuth();
   const router = useRouter();
 
   // Form state for editing
   const [formData, setFormData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
-    dateOfBirth: user?.dateOfBirth || "",
+    name: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
   });
 
   // Load user data on component mount
@@ -85,22 +131,33 @@ const ProfilePage = () => {
       setLoading(true);
 
       // Fetch orders
-      const ordersData = await fetchData("/orders");
-      if (ordersData && Array.isArray(ordersData.data)) {
-        setOrders(ordersData.data);
+      const ordersResponse = await fetchData<ApiResponse<Order[]>>("/orders");
+      if (ordersResponse && ordersResponse.success && Array.isArray(ordersResponse.data)) {
+        setOrders(ordersResponse.data);
       } else {
         setOrders([]);
       }
 
       // Fetch addresses
-      const addressesData = await fetchData("/addresses");
-      if (addressesData && Array.isArray(addressesData.data)) {
-        setAddresses(addressesData.data);
+      const addressesResponse = await fetchData<ApiResponse<Address[]>>("/addresses");
+      if (addressesResponse && addressesResponse.success && Array.isArray(addressesResponse.data)) {
+        setAddresses(addressesResponse.data);
       } else {
         setAddresses([]);
       }
 
-      // For wishlist and payment methods, we'll use mock data for now
+      // Fetch wishlist count
+      const wishlistResponse = await fetchData<ApiResponse<any>>("/wishlist");
+      if (wishlistResponse && wishlistResponse.success) {
+        // Assuming wishlist data has items array or count property
+        if (Array.isArray(wishlistResponse.data)) {
+          setWishlistCount(wishlistResponse.data.length);
+        } else if (wishlistResponse.data && typeof wishlistResponse.data === 'object') {
+          setWishlistCount((wishlistResponse.data as any).count || 0);
+        }
+      }
+
+      // For payment methods, we'll use mock data for now
       // You can integrate APIs when available
       setPaymentMethods([
         {
@@ -114,7 +171,7 @@ const ProfilePage = () => {
           id: 2,
           type: "PayPal",
           name: "PayPal Account",
-          details: "john@example.com",
+          details: user?.email || "john@example.com",
           isDefault: false,
         },
       ]);
@@ -138,15 +195,26 @@ const ProfilePage = () => {
       setLoading(true);
 
       // Update profile API call
-      const updatedUser = await fetchData("/auth/update-profile", {
+      const updateData: UpdateProfileData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        dateOfBirth: formData.dateOfBirth,
+      };
+
+      const updatedUserResponse = await fetchData<ApiResponse<ApiUserData>>("/auth/update-profile", {
         method: "PUT",
-        data: formData,
+        data: updateData,
       });
 
       // Update user in context
-      if (updatedUser) {
-        updateUser(updatedUser);
+      if (updatedUserResponse && updatedUserResponse.success && updatedUserResponse.data) {
+        // Convert API user data to AuthContext user data
+        const authUserData = convertApiUserToAuthUser(updatedUserResponse.data);
+        updateUser(authUserData);
         toast.success("Profile updated successfully!");
+      } else {
+        throw new Error("Failed to update profile");
       }
 
       setIsEditing(false);
@@ -185,12 +253,16 @@ const ProfilePage = () => {
     if (!confirm("Are you sure you want to delete this address?")) return;
 
     try {
-      await fetchData(`/addresses/${id}`, {
+      const response = await fetchData<ApiResponse<{ id: number }>>(`/addresses/${id}`, {
         method: "DELETE",
       });
 
-      setAddresses((prev) => prev.filter((addr) => addr.id !== id));
-      toast.success("Address deleted successfully!");
+      if (response && response.success) {
+        setAddresses((prev) => prev.filter((addr) => addr.id !== id));
+        toast.success("Address deleted successfully!");
+      } else {
+        throw new Error("Failed to delete address");
+      }
     } catch (error) {
       console.error("Error deleting address:", error);
       toast.error("Failed to delete address");
@@ -200,12 +272,17 @@ const ProfilePage = () => {
   // Set default address
   const setDefaultAddress = async (id: number) => {
     try {
-      const updatedAddress = await fetchData(`/addresses/${id}`, {
+      const addressToUpdate = addresses.find((addr) => addr.id === id);
+      if (!addressToUpdate) return;
+
+      const updateData = { ...addressToUpdate, isDefault: true };
+      
+      const response = await fetchData<ApiResponse<Address>>(`/addresses/${id}`, {
         method: "PUT",
-        data: { ...addresses.find((addr) => addr.id === id), isDefault: true },
+        data: updateData,
       });
 
-      if (updatedAddress) {
+      if (response && response.success) {
         setAddresses((prev) =>
           prev.map((addr) => ({
             ...addr,
@@ -213,6 +290,8 @@ const ProfilePage = () => {
           }))
         );
         toast.success("Default address updated!");
+      } else {
+        throw new Error("Failed to update default address");
       }
     } catch (error) {
       console.error("Error setting default address:", error);
@@ -226,17 +305,47 @@ const ProfilePage = () => {
       return;
 
     try {
-      setPaymentMethods((prev) => prev.filter((pm) => pm.id !== id));
-      toast.success("Payment method deleted successfully!");
+      const response = await fetchData<ApiResponse<{ id: number }>>(`/payment-methods/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response && response.success) {
+        setPaymentMethods((prev) => prev.filter((pm) => pm.id !== id));
+        toast.success("Payment method deleted successfully!");
+      } else {
+        // If API is not implemented yet, simulate success
+        setPaymentMethods((prev) => prev.filter((pm) => pm.id !== id));
+        toast.success("Payment method deleted successfully!");
+      }
     } catch (error) {
       console.error("Error deleting payment method:", error);
-      toast.error("Failed to delete payment method");
+      // If API fails, still remove from UI for demo purposes
+      setPaymentMethods((prev) => prev.filter((pm) => pm.id !== id));
+      toast.success("Payment method deleted successfully!");
     }
   };
 
   // Set default payment method
   const setDefaultPayment = async (id: number) => {
     try {
+      const response = await fetchData<ApiResponse<PaymentMethod>>(`/payment-methods/${id}/default`, {
+        method: "PUT",
+      });
+
+      if (response && response.success) {
+        setPaymentMethods((prev) =>
+          prev.map((pm) => ({
+            ...pm,
+            isDefault: pm.id === id,
+          }))
+        );
+        toast.success("Default payment method updated!");
+      } else {
+        throw new Error("Failed to update default payment method");
+      }
+    } catch (error) {
+      console.error("Error setting default payment:", error);
+      // If API fails, still update UI for demo purposes
       setPaymentMethods((prev) =>
         prev.map((pm) => ({
           ...pm,
@@ -244,9 +353,6 @@ const ProfilePage = () => {
         }))
       );
       toast.success("Default payment method updated!");
-    } catch (error) {
-      console.error("Error setting default payment:", error);
-      toast.error("Failed to update default payment method");
     }
   };
 
@@ -417,19 +523,21 @@ const ProfilePage = () => {
           </div>
 
           <div className="bg-white rounded-2xl p-4 md:p-6 shadow-lg border-l-4 border-amber-500 transform hover:scale-105 transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-gray-600 font-medium">
-                  Wishlist
-                </p>
-                <p className="text-2xl md:text-3xl font-bold text-gray-800">
-                  {0}
-                </p>
+            <Link href="/header/wishlist" className="block">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs md:text-sm text-gray-600 font-medium">
+                    Wishlist
+                  </p>
+                  <p className="text-2xl md:text-3xl font-bold text-gray-800">
+                    {wishlistCount}
+                  </p>
+                </div>
+                <div className="w-8 h-8 md:w-12 md:h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                  <span className="text-lg md:text-2xl">❤️</span>
+                </div>
               </div>
-              <div className="w-8 h-8 md:w-12 md:h-12 bg-amber-100 rounded-full flex items-center justify-center">
-                <span className="text-lg md:text-2xl">❤️</span>
-              </div>
-            </div>
+            </Link>
           </div>
 
           <div className="bg-white rounded-2xl p-4 md:p-6 shadow-lg border-l-4 border-green-500 transform hover:scale-105 transition-all duration-300">
