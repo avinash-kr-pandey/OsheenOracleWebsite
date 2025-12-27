@@ -228,33 +228,37 @@ export interface Review {
   avatar: string;
 }
 
-// Fetch all products
-// utils/api/api.ts mein fetchProducts function update karo
+
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
     console.log("🔍 Fetching products from API...");
-    const response = await fetchData<any>("/products");
+    
+    // Use unknown instead of any
+    const response = await fetchData<unknown>("/products");
     
     console.log("🔍 API Response:", response);
     
-    // Check different response formats
+    // Check different response formats with proper type checking
     if (Array.isArray(response)) {
       console.log("✅ Products received as array");
-      return response;
+      // Type guard to ensure it's an array of Product
+      return response as Product[];
     } else if (response && typeof response === 'object') {
-      // Check for common response formats
-      if (Array.isArray(response.data)) {
+      const responseObj = response as Record<string, unknown>;
+      
+      // Check for common response formats with type safety
+      if (Array.isArray(responseObj.data)) {
         console.log("✅ Products found in response.data");
-        return response.data;
-      } else if (Array.isArray(response.products)) {
+        return responseObj.data as Product[];
+      } else if (Array.isArray(responseObj.products)) {
         console.log("✅ Products found in response.products");
-        return response.products;
-      } else if (Array.isArray(response.items)) {
+        return responseObj.products as Product[];
+      } else if (Array.isArray(responseObj.items)) {
         console.log("✅ Products found in response.items");
-        return response.items;
-      } else if (Array.isArray(response.result)) {
+        return responseObj.items as Product[];
+      } else if (Array.isArray(responseObj.result)) {
         console.log("✅ Products found in response.result");
-        return response.result;
+        return responseObj.result as Product[];
       } else {
         console.warn("⚠️ Unexpected response format:", response);
         return [];
@@ -263,7 +267,7 @@ export const fetchProducts = async (): Promise<Product[]> => {
     
     console.error("❌ Invalid response format");
     return [];
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("❌ Error fetching products:", error);
     return []; // Return empty array instead of throwing
   }
