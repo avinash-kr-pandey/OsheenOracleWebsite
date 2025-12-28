@@ -10,7 +10,6 @@ interface ProductInfoProps {
   product: Product;
 }
 
-// Custom hook को component के बाहर रखें
 const useImagePreloader = (imageUrls: string[]) => {
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
 

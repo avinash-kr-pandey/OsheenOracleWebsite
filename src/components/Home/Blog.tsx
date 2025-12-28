@@ -55,7 +55,7 @@ const Blog: React.FC = () => {
           {blogPosts?.map((blog) => (
             <motion.div
               key={blog.id}
-              className="flex-shrink-0 w-[30%]"
+              className="flex-shrink-0 w-full md:w-80 bg-white rounded-xl shadow-lg p-4 cursor-pointer hover:shadow-2xl transition-shadow"
               transition={{ type: "spring", stiffness: 300 }}
             >
               {/* Blog Image */}
@@ -69,27 +69,32 @@ const Blog: React.FC = () => {
               </div>
 
               {/* Blog Content */}
-              <div className="py-6">
-                <p className="text-sm mb-2 text-gray-600">
-                  {blog.date} • {blog.category}
-                </p>
+             <div className="py-4 sm:py-6">
+  <p className="text-xs sm:text-sm mb-1 sm:mb-2 text-gray-600">
+    {blog.date} • {blog.category}
+  </p>
 
-                <h3 className="text-xl font-serif mb-3">{blog.title}</h3>
+  <h3 className="text-lg sm:text-xl font-serif mb-2 sm:mb-3">
+    {blog.title}
+  </h3>
 
-                <p className="text-sm text-gray-600 line-clamp-2 mb-4">
-                  {blog.description}
-                </p>
+  <p className="text-sm text-gray-600 line-clamp-2 mb-3 sm:mb-4">
+    {blog.description}
+  </p>
 
-                <div className="flex items-center justify-between">
-                  <Link href={`/blog`}>
-                    <button className="bg-yellow-400 px-4 py-2 rounded font-semibold cursor-pointer hover:bg-yellow-500 transition-all">
-                      Read Article
-                    </button>
-                  </Link>
+  <div className="flex items-center justify-between gap-2">
+    <Link href={`/blog`}>
+      <button className="bg-yellow-400 px-3 sm:px-4 py-2 rounded font-semibold text-sm sm:text-base hover:bg-yellow-500 transition-all whitespace-nowrap">
+        Read Article
+      </button>
+    </Link>
 
-                  <div className="text-sm text-gray-500">✍️ {blog.author}</div>
-                </div>
-              </div>
+    <div className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">
+      ✍️ {blog.author}
+    </div>
+  </div>
+</div>
+
             </motion.div>
           ))}
         </motion.div>

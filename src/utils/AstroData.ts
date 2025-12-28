@@ -5,7 +5,7 @@ export const zodiacData = [
     id: 1,
     name: "Angel Card Reading",
     date: "",
-    image: "https://osheenoracle.com/wp-content/uploads/2024/12/card-ppp.jpg",
+    image: "/images/resize3.jpg",
     description:
       "Receive gentle divine guidance filled with love, clarity, and healing messages from the angelic realm.",
     traits: ["Guidance", "Healing", "Clarity", "Hope", "Light"],
