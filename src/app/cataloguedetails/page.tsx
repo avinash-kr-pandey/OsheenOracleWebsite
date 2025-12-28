@@ -54,10 +54,10 @@ const CataloguePage = () => {
 
   // Enhanced zodiac data with additional properties - FIXED TYPE ISSUE
   const enhancedZodiacData: Zodiac[] = zodiacData.map((zodiac, index) => ({
-    ...zodiac, // This now includes all properties from your original data
+    ...zodiac,
     category: ["Love", "Career", "Personal", "Spiritual"][index % 4],
-    rating: Math.random() * 2 + 3, // Random rating between 3-5
-    price: Math.floor(Math.random() * 100) + 50, // Random price between 50-150
+    rating: zodiac.rating ?? 4.5,
+    price: typeof zodiac.price === "string" ? parseFloat(zodiac.price) : zodiac.price,
   }));
 
   // Get unique categories
@@ -361,7 +361,7 @@ const CataloguePage = () => {
                       <div className="flex items-center justify-between mb-3">
                         {renderStars(zodiac.rating!)}
                         <span className="text-lg font-bold text-purple-600">
-                          ${zodiac.price}
+                          ₹{zodiac.price}
                         </span>
                       </div>
 

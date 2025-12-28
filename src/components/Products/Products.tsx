@@ -41,7 +41,7 @@ const Products: React.FC<ProductsProps> = ({
       : [];
 
     console.log("✅ Valid products count:", validProducts.length);
-    
+
     // Debug first product
     if (validProducts.length > 0) {
       console.log("🔍 First product details:", {
@@ -49,10 +49,10 @@ const Products: React.FC<ProductsProps> = ({
         _id: validProducts[0]._id,
         name: validProducts[0].name,
         hasId: !!validProducts[0].id,
-        has_Id: !!validProducts[0]._id
+        has_Id: !!validProducts[0]._id,
       });
     }
-    
+
     setFilteredProducts(validProducts);
   }, [products]);
 
@@ -220,25 +220,28 @@ const Products: React.FC<ProductsProps> = ({
           </div>
 
           {/* Sort Dropdown */}
-          <div className="flex items-center gap-2 md:gap-3 bg-white shadow-sm border border-gray-100 px-3 py-2 rounded-xl hover:shadow-md transition-all duration-300">
+          <div className="flex items-center gap-2 md:gap-3 bg-white shadow-sm border border-gray-100 px-3 py-2 rounded-xl hover:shadow-md transition-all duration-300 w-full sm:w-auto">
             <label
               htmlFor="sort-select"
               className="text-gray-600 text-sm font-medium whitespace-nowrap"
             >
               Sort by:
             </label>
-            <div className="relative w-44">
+
+            <div className="relative w-full sm:w-56 lg:w-64">
               <select
                 id="sort-select"
                 value={sortOption}
                 onChange={(e) => onSortChange(e.target.value)}
-                className="appearance-none w-full px-3 py-2 text-sm bg-white cursor-pointer"
+                className="appearance-none w-full px-4 py-2 pr-10 text-sm bg-white cursor-pointer rounded-lg  focus:ring-2 focus:ring-blue-100"
               >
                 <option value="newest">🆕 New Arrivals</option>
                 <option value="price-low">⬇️ Price: Low to High</option>
                 <option value="price-high">⬆️ Price: High to Low</option>
                 <option value="rating">⭐ Highest Rated</option>
               </select>
+
+              {/* Dropdown Icon */}
               <svg
                 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
                 fill="none"
@@ -291,14 +294,14 @@ const Products: React.FC<ProductsProps> = ({
 
             // ✅ FIXED: Use _id if available, otherwise use id (both are strings)
             const productId = item._id || item.id || `temp-${index}`;
-            
+
             console.log(`🔗 Product ${index}:`, {
               name: item.name,
               id: item.id,
               _id: item._id,
               finalId: productId,
               idType: typeof item.id,
-              _idType: typeof item._id
+              _idType: typeof item._id,
             });
 
             if (!productId) {

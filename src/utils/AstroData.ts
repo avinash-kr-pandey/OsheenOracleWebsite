@@ -4,6 +4,8 @@ export const zodiacData = [
   {
     id: 1,
     name: "Angel Card Reading",
+    price: "599",
+    rating: 4.5,
     date: "",
     image: "/images/resize3.jpg",
     description:
@@ -31,6 +33,8 @@ export const zodiacData = [
   {
     id: 2,
     name: "On Call Consultation",
+    price: "799",
+    rating: 4.7,
     date: "",
     image: "/images/withcandle.png",
     description:
@@ -58,6 +62,8 @@ export const zodiacData = [
   {
     id: 3,
     name: "Tarot Reading & Guidance",
+    price: "699",
+    rating: 4.6,
     date: "",
     image: "/images/aboutglobe.png",
     description:
@@ -85,6 +91,8 @@ export const zodiacData = [
   {
     id: 4,
     name: "Relationship Healing Spells",
+    price: "899",
+    rating: 4.8,
     date: "",
     image: "/images/card-hh.jpg",
     description:
@@ -108,6 +116,8 @@ export const zodiacData = [
   {
     id: 5,
     name: "Career Healing Spells",
+    price: "799",
+    rating: 4.4,
     date: "",
     image: "/images/resize-gallery2.jpg",
     description:
@@ -131,8 +141,10 @@ export const zodiacData = [
   {
     id: 6,
     name: "Spell Jars for Success",
+    price: "699",
+    rating: 4.3,
     date: "",
-    image: "/images/img-1.jpg",
+    image: "/images/spellJars/img-8.jpg",
     description:
       "Handcrafted spell jars infused with crystals and intentions to attract abundance and opportunities.",
     traits: ["Manifestation", "Abundance", "Success", "Energy"],
@@ -154,8 +166,10 @@ export const zodiacData = [
   {
     id: 7,
     name: "Reiki Healing Sessions",
+    price: "999",
+    rating: 4.9,
     date: "",
-    image: "/images/youaremagic.jpg",
+    image: "/images/resize-gallery2.jpg",
     description:
       "Energy healing sessions to release blockages and restore peace to mind, body, and soul.",
     traits: ["Healing", "Energy", "Peace", "Balance"],
