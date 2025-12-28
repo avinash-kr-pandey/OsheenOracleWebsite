@@ -139,21 +139,16 @@ const Products: React.FC<ProductsProps> = ({
     setFilteredProducts(Array.isArray(products) ? products : []);
   };
 
-  const renderStars = (rating: number) => (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <span
-          key={star}
-          className={`text-sm ${
-            star <= rating ? "text-yellow-400" : "text-gray-300"
-          }`}
-        >
-          ★
-        </span>
-      ))}
-      <span className="text-gray-500 text-xs ml-1">({rating || 0})</span>
-    </div>
-  );
+  const renderStars = (rating: number) => {
+    const safeRating = rating ?? 0;
+
+    return (
+      <div className="flex items-center gap-1 text-sm text-gray-600">
+        <span className="text-yellow-500 ">★</span>
+        <span className="font-medium">{safeRating.toFixed(1)}/5</span>
+      </div>
+    );
+  };
 
   return (
     <div className="w-full p-6 bg-[#C4F9FF]">
@@ -284,16 +279,32 @@ const Products: React.FC<ProductsProps> = ({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProducts.map((item, index) => {
+            const originalPrice = item.originalPrice || 0;
+            const sellingPrice = item.price || 0;
+
+            const discountPercent =
+              originalPrice > sellingPrice && originalPrice > 0
+                ? Math.round(
+                    ((originalPrice - sellingPrice) / originalPrice) * 100
+                  )
+                : 0;
+
             // ✅ Final safety check before rendering
             if (!item) {
               console.warn(`Invalid product at index ${index}:`, item);
               return null;
             }
 
-            // ✅ FIXED: Use _id if available, otherwise use id (both are strings)
-            const productId = item._id || item.id || `temp-${index}`;
+            // Fixed code:
+            const productId = item._id
+              ? String(item._id) // ✅ ObjectId ko string me convert karo
+              : item.id
+              ? String(item.id) // ✅ id bhi string me convert karo
+              : `temp-${index}`;
+
+            // URL: /products/676a7b8c9d0e1f2a3b4c5d6e
 
             console.log(`🔗 Product ${index}:`, {
               name: item.name,
@@ -331,9 +342,11 @@ const Products: React.FC<ProductsProps> = ({
                         NEW
                       </span>
                     )}
-                    <span className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
-                      20% OFF
-                    </span>
+                    {discountPercent > 0 && (
+                      <span className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
+                        {discountPercent}% OFF
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -345,7 +358,9 @@ const Products: React.FC<ProductsProps> = ({
                   <h3 className="font-medium text-gray-900 text-sm mb-2 line-clamp-2 h-10">
                     {item.name || "Product Name"}
                   </h3>
-                  <div className="mb-3">{renderStars(item.rating || 0)}</div>
+                  <div className="mb-2 flex items-center">
+                    {renderStars(item.rating || 0)}
+                  </div>
 
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-baseline gap-2">
@@ -353,7 +368,7 @@ const Products: React.FC<ProductsProps> = ({
                         Rs. {(item.price || 0).toFixed(2)}
                       </span>
                       <span className="text-sm text-gray-400 line-through">
-                        Rs. {((item.price || 0) * 1.2).toFixed(2)}
+                        Rs. {(item.originalPrice || 0).toFixed(2)}
                       </span>
                     </div>
                   </div>

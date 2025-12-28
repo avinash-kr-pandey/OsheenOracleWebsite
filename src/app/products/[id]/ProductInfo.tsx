@@ -5,6 +5,7 @@ import { useState, useRef, useMemo, useEffect } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { Product } from "@/types/product";
+import { useRouter } from "next/navigation"; // ✅ Added
 
 interface ProductInfoProps {
   product: Product;
@@ -17,7 +18,7 @@ const useImagePreloader = (imageUrls: string[]) => {
     let isMounted = true;
     const promises = imageUrls.map((url) => {
       return new Promise<void>((resolve) => {
-        const img = document.createElement('img');
+        const img = document.createElement("img");
         img.src = url;
         img.onload = () => {
           if (isMounted) {
@@ -42,54 +43,59 @@ const useImagePreloader = (imageUrls: string[]) => {
 };
 
 export default function ProductInfo({ product }: ProductInfoProps) {
-  // ✅ STEP 1: सभी hooks को TOP LEVEL पर call करें (किसी भी condition से पहले)
-  const [selectedImage, setSelectedImage] = useState<string>("/placeholder.jpg");
+  const [selectedImage, setSelectedImage] =
+    useState<string>("/placeholder.jpg");
   const [selectedSize, setSelectedSize] = useState<string>("");
-  const [selectedColor, setSelectedColor] = useState<string>(""); // Warning: इसका use नहीं हो रहा
+  const [selectedColor, setSelectedColor] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<string>("description");
   const [showZoom, setShowZoom] = useState<boolean>(false);
-  const [zoomPosition, setZoomPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  
+  const [zoomPosition, setZoomPosition] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+
   const imageRef = useRef<HTMLDivElement>(null);
-  
-  const { addToCart } = useCart();
+  const router = useRouter(); // ✅ Added
+
+  const { addToCart, cartItems } = useCart(); // ✅ Added cartItems
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
-  // ✅ STEP 2: useMemo भी top level पर
+  // ✅ Check if product is already in cart
+  const isInCart = useMemo(() => {
+    const productId = product._id || product.id || "";
+    return cartItems.some((item) => item.id === productId);
+  }, [cartItems, product._id, product.id]);
+
+  // ✅ Get all images from product
   const allImages = useMemo(() => {
     if (!product) return ["/placeholder.jpg"];
+
     const mainImage = product?.image || "/placeholder.jpg";
     const additionalImages = product?.images || [];
-    return Array.from(new Set([mainImage, ...additionalImages]));
+
+    // Create unique array of images
+    const images = [mainImage, ...additionalImages].filter(Boolean);
+    const uniqueImages = Array.from(
+      new Set(images.filter((img) => img && img !== ""))
+    );
+
+    return uniqueImages.length > 0 ? uniqueImages : ["/placeholder.jpg"];
   }, [product]);
 
-  // ✅ STEP 3: Custom hook भी top level पर
+  // ✅ Custom hook for image preloading
   const loadedImages = useImagePreloader(allImages);
 
-  // ✅ STEP 4: Initial image selection के लिए useEffect
+  // ✅ Initialize selected image
   useEffect(() => {
     if (product?.image) {
       setSelectedImage(product.image);
+    } else if (allImages.length > 0) {
+      setSelectedImage(allImages[0]);
     }
-  }, [product]);
+  }, [product, allImages]);
 
-  // ✅ STEP 5: अब early return करें (सभी hooks call होने के बाद)
-  if (!product) {
-    console.error("❌ ProductInfo: No product data provided");
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-[#C4F9FF]">
-        <div className="text-center">
-          <div className="text-5xl mb-4">😔</div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">
-            Product not found
-          </h3>
-        </div>
-      </div>
-    );
-  }
-
-  // ✅ STEP 6: अब बाकी functions define करें
+  // ✅ Mouse handlers for zoom
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!imageRef.current || !showZoom) return;
 
@@ -119,47 +125,89 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     setShowZoom(false);
   };
 
+  // ✅ Handle color selection
+  const handleColorSelect = (color: string) => {
+    setSelectedColor(color);
+  };
+
   const handleAddToCart = () => {
+    // Check if product is already in cart
+    if (isInCart) {
+      // Navigate to cart page
+      router.push("/cart");
+      return;
+    }
+
+    // Check if size is required and not selected
     if (product.size && product.size.length > 0 && !selectedSize) {
       alert("Please select a size");
       return;
     }
 
+    // Check if color is required and not selected
     if (product.color && product.color.length > 0 && !selectedColor) {
       alert("Please select a color");
       return;
     }
 
     const cartItem = {
-      id: product.id,
+      id: product._id || product.id || "",
       name: product.name || "Unknown Product",
       price: product.price || 0,
-      image: product.image || "/placeholder.jpg",
+      image: selectedImage || product.image || "/placeholder.jpg",
       quantity: quantity,
       size: selectedSize,
       color: selectedColor,
     };
 
     addToCart(cartItem);
-    alert("Product added to cart successfully!");
+
+    // Show success message
+    const message = `"${product.name}" added to cart!`;
+    alert(message);
   };
 
   const handleBuyNow = () => {
-    handleAddToCart();
-    window.location.href = "/cart";
+    // If not in cart, add it first
+    if (!isInCart) {
+      if (product.size && product.size.length > 0 && !selectedSize) {
+        alert("Please select a size");
+        return;
+      }
+
+      if (product.color && product.color.length > 0 && !selectedColor) {
+        alert("Please select a color");
+        return;
+      }
+
+      const cartItem = {
+        id: product._id || product.id || "",
+        name: product.name || "Unknown Product",
+        price: product.price || 0,
+        image: selectedImage || product.image || "/placeholder.jpg",
+        quantity: quantity,
+        size: selectedSize,
+        color: selectedColor,
+      };
+
+      addToCart(cartItem);
+    }
+
+    // Navigate to checkout
+    window.location.href = "/getway";
   };
 
   const handleWishlistToggle = () => {
     const wishlistItem = {
-      id: product.id,
+      id: product._id || product.id || "",
       name: product.name || "Unknown Product",
       price: product.price || 0,
       image: product.image || "/placeholder.jpg",
-      inStock: true,
+      inStock: product.inStock ?? true,
     };
 
-    if (isInWishlist(product.id)) {
-      removeFromWishlist(product.id);
+    if (isInWishlist(product._id || product.id || "")) {
+      removeFromWishlist(product._id || product.id || "");
       alert("Product removed from wishlist ❤️");
     } else {
       addToWishlist(wishlistItem);
@@ -168,13 +216,14 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   };
 
   const renderStars = (rating: number) => {
+    const safeRating = rating || 0;
     return Array.from({ length: 5 }).map((_, index) => (
       <span
         key={index}
         className={`text-sm ${
-          index < Math.floor(rating)
+          index < Math.floor(safeRating)
             ? "text-yellow-500"
-            : index === Math.floor(rating) && rating % 1 >= 0.5
+            : index === Math.floor(safeRating) && safeRating % 1 >= 0.5
             ? "text-yellow-300"
             : "text-gray-300"
         }`}
@@ -184,20 +233,37 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     ));
   };
 
-  // ✅ STEP 7: Rest of your component JSX
-  const discountPrice = (product.price || 0) * 1.2;
+  // ✅ Get dynamic data from product
+  const discountPrice = product.originalPrice || (product.price || 0) * 1.2;
   const features = product.features || {
     freeShipping: true,
     warranty: "2 Year Warranty",
     authentic: true,
   };
+
   const shippingInfo = product.shippingInfo || {
     delivery: "Delivery in 2-3 days",
     securePayment: true,
   };
-  const reviewsCount = product.reviews?.length || 128;
+
+  const reviewsCount = product.reviews?.length || 0;
   const averageRating = product.rating || 0;
   const isCurrentImageLoaded = loadedImages.has(selectedImage);
+
+  // ✅ Early return if no product
+  if (!product) {
+    console.error("❌ ProductInfo: No product data provided");
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#C4F9FF]">
+        <div className="text-center">
+          <div className="text-5xl mb-4">😔</div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            Product not found
+          </h3>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -289,9 +355,16 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                       </span>
                     </div>
                   )}
-                  <div className="absolute top-4 right-4 bg-gradient-to-r from-amber-400 to-amber-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg z-10">
-                    -20%
-                  </div>
+                  {discountPrice > (product.price || 0) && (
+                    <div className="absolute top-4 right-4 bg-gradient-to-r from-amber-400 to-amber-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg z-10">
+                      {Math.round(
+                        ((discountPrice - (product.price || 0)) /
+                          discountPrice) *
+                          100
+                      )}
+                      % OFF
+                    </div>
+                  )}
                 </div>
 
                 {/* Zoomed Preview - Right Side Modal - Only show when image is loaded */}
@@ -343,11 +416,11 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                   {renderStars(product.rating || 0)}
                 </div>
                 <span className="text-gray-700 font-medium text-sm">
-                  {product.rating || 0}/5
+                  {(product.rating || 0).toFixed(1)}/5
                 </span>
                 <span className="text-gray-400">•</span>
                 <span className="text-gray-600 text-sm">
-                  {reviewsCount} Reviews
+                  {reviewsCount} Review{reviewsCount !== 1 ? "s" : ""}
                 </span>
               </div>
 
@@ -357,9 +430,12 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                   <p className="text-3xl font-bold text-gray-900">
                     Rs. {(product.price || 0).toFixed(2)}
                   </p>
-                  <p className="text-xl text-gray-500 line-through">
-                    Rs. {discountPrice.toFixed(2)}
-                  </p>
+                  {product.originalPrice &&
+                    product.originalPrice > (product.price || 0) && (
+                      <p className="text-xl text-gray-500 line-through">
+                        Rs. {product.originalPrice.toFixed(2)}
+                      </p>
+                    )}
                 </div>
                 <p className="text-green-600 font-semibold text-sm flex items-center gap-1">
                   <span>✓</span>
@@ -374,6 +450,44 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                 {product.description ||
                   "Premium quality product designed for ultimate comfort and style. Crafted with sustainable materials and exceptional attention to detail."}
               </p>
+
+              {/* Color Selection */}
+              {product.color && product.color.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-gray-900 text-sm">
+                    SELECT COLOR
+                  </h3>
+                  <div className="flex flex-wrap gap-3">
+                    {product.color.map((color) => {
+                      const isHexColor = /^#([0-9A-F]{3}){1,2}$/i.test(color);
+
+                      return (
+                        <button
+                          key={color}
+                          onClick={() => handleColorSelect(color)}
+                          className={`flex items-center gap-2 py-2 px-4 border-2 rounded-lg font-semibold text-xs transition-all duration-200 ${
+                            selectedColor === color
+                              ? "border-pink-500 bg-pink-50 text-pink-700 shadow-md"
+                              : "border-gray-200 hover:border-pink-300 hover:bg-pink-25 text-gray-700 hover:shadow-sm"
+                          }`}
+                        >
+                          {isHexColor ? (
+                            <>
+                              <div
+                                className="w-4 h-4 rounded-full border border-gray-300"
+                                style={{ backgroundColor: color }}
+                              />
+                              <span className="capitalize">{color}</span>
+                            </>
+                          ) : (
+                            <span className="capitalize">{color}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Size Selection */}
               {product.size && product.size.length > 0 && (
@@ -425,12 +539,17 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                     </button>
                   </div>
 
+                  {/* ✅ FIXED: Add to Cart Button - Shows different state if already in cart */}
                   <button
                     onClick={handleAddToCart}
-                    className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white py-3 px-6 rounded-xl font-bold text-sm transition-all duration-300 transform shadow-lg hover:shadow-xl flex items-center justify-center gap-2 cursor-pointer"
+                    className={`flex-1 py-3 px-6 rounded-xl font-bold text-sm transition-all duration-300 transform shadow-lg hover:shadow-xl flex items-center justify-center gap-2 cursor-pointer ${
+                      isInCart
+                        ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                        : "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white"
+                    }`}
                   >
-                    <span>🛒</span>
-                    ADD TO CART
+                    <span>{isInCart ? "✅" : "🛒"}</span>
+                    {isInCart ? "ALREADY IN CART" : "ADD TO CART"}
                   </button>
                 </div>
 
@@ -438,13 +557,19 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                   <button
                     onClick={handleWishlistToggle}
                     className={`border-2 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-                      isInWishlist(product.id)
+                      isInWishlist(product._id || product.id || "")
                         ? "border-red-500 bg-red-50 text-red-600"
                         : "border-amber-500 text-amber-600 hover:bg-amber-50"
                     }`}
                   >
-                    <span>{isInWishlist(product.id) ? "❤️" : "🤍"}</span>
-                    {isInWishlist(product.id) ? "WISHLISTED" : "WISHLIST"}
+                    <span>
+                      {isInWishlist(product._id || product.id || "")
+                        ? "❤️"
+                        : "🤍"}
+                    </span>
+                    {isInWishlist(product._id || product.id || "")
+                      ? "REMOVE FROM WISHLIST"
+                      : "WISHLIST"}
                   </button>
                   <button
                     onClick={handleBuyNow}
@@ -577,7 +702,9 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                     <div className="space-y-3 text-sm sm:text-base">
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <span className="font-medium text-gray-600">Brand</span>
-                        <span className="text-gray-900">{product.brand || "Unknown"}</span>
+                        <span className="text-gray-900">
+                          {product.brand || "Unknown"}
+                        </span>
                       </div>
                       <div className="flex justify-between border-b border-gray-100 pb-2">
                         <span className="font-medium text-gray-600">
@@ -595,6 +722,12 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                           {product.gender?.join(", ") || "Not specified"}
                         </span>
                       </div>
+                      {product.sku && (
+                        <div className="flex justify-between border-b border-gray-100 pb-2">
+                          <span className="font-medium text-gray-600">SKU</span>
+                          <span className="text-gray-900">{product.sku}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-3 text-sm sm:text-base">
@@ -611,27 +744,61 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                           <span className="font-medium text-gray-600">
                             Colors
                           </span>
-                          <div className="flex items-center gap-2">
-                            {product.color.map((clr, i) => (
-                              <div key={i} className="flex items-center gap-1">
-                                <span
-                                  className="w-4 h-4 rounded-full border border-gray-300"
-                                  style={{ backgroundColor: clr.toLowerCase() }}
-                                ></span>
-                                <span className="text-gray-900 text-sm">
-                                  {clr}
-                                </span>
-                              </div>
-                            ))}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {product.color.map((clr, i) => {
+                              const isHexColor = /^#([0-9A-F]{3}){1,2}$/i.test(
+                                clr
+                              );
+                              return (
+                                <div
+                                  key={i}
+                                  className="flex items-center gap-1"
+                                >
+                                  {isHexColor && (
+                                    <span
+                                      className="w-4 h-4 rounded-full border border-gray-300"
+                                      style={{
+                                        backgroundColor: clr.toLowerCase(),
+                                      }}
+                                    ></span>
+                                  )}
+                                  <span className="text-gray-900 text-sm capitalize">
+                                    {clr}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
-                      <div className="flex justify-between border-b border-gray-100 pb-2">
-                        <span className="font-medium text-gray-600">SKU</span>
-                        <span className="text-gray-900">
-                          PRD-{String(product.id).padStart(6, "0")}
-                        </span>
-                      </div>
+                      {product.stock !== undefined && (
+                        <div className="flex justify-between border-b border-gray-100 pb-2">
+                          <span className="font-medium text-gray-600">
+                            Stock
+                          </span>
+                          <span
+                            className={`font-semibold ${
+                              product.stock > 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {product.stock > 0
+                              ? `${product.stock} available`
+                              : "Out of stock"}
+                          </span>
+                        </div>
+                      )}
+                      {product.weight && (
+                        <div className="flex justify-between border-b border-gray-100 pb-2">
+                          <span className="font-medium text-gray-600">
+                            Weight
+                          </span>
+                          <span className="text-gray-900">
+                            {product.weight} kg
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -651,7 +818,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                       <ul className="space-y-2 text-gray-600">
                         <li className="flex items-center gap-2">
                           <span className="text-blue-500">🚚</span>
-                          {shippingInfo.delivery}
+                          {shippingInfo.delivery || "Delivery in 2-3 days"}
                         </li>
                         <li className="flex items-center gap-2">
                           <span className="text-blue-500">⚡</span>
@@ -693,59 +860,82 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                   <h3 className="text-lg sm:text-xl font-bold text-gray-900">
                     Customer Reviews
                   </h3>
+
+                  {/* Rating Summary */}
                   <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-6">
                     <div className="text-center">
                       <div className="text-3xl font-bold text-gray-900">
-                        {averageRating}
+                        {averageRating.toFixed(1)}
                       </div>
                       <div className="flex justify-center gap-1">
                         {renderStars(averageRating)}
                       </div>
                       <div className="text-sm text-gray-600 mt-1">
-                        Based on {reviewsCount} reviews
+                        Based on {reviewsCount} review
+                        {reviewsCount !== 1 ? "s" : ""}
                       </div>
                     </div>
+
+                    {/* ✅ FIXED: Calculate real rating distribution */}
                     <div className="flex-1 w-full space-y-1">
-                      {[5, 4, 3, 2, 1].map((star) => (
-                        <div key={star} className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600 w-4">
-                            {star}
-                          </span>
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-yellow-500 h-2 rounded-full"
-                              style={{
-                                width: `${
-                                  star === 5
-                                    ? 70
-                                    : star === 4
-                                    ? 20
-                                    : star === 3
-                                    ? 5
-                                    : star === 2
-                                    ? 3
-                                    : 2
-                                }%`,
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm text-gray-600 w-8">
-                            {star === 5
-                              ? 70
-                              : star === 4
-                              ? 20
-                              : star === 3
-                              ? 5
-                              : star === 2
-                              ? 3
-                              : 2}
-                            %
-                          </span>
-                        </div>
-                      ))}
+                      {reviewsCount > 0
+                        ? // Calculate actual percentages from reviews
+                          [5, 4, 3, 2, 1].map((star) => {
+                            // Count how many reviews have this star rating
+                            const starCount =
+                              product.reviews?.filter(
+                                (review) => Math.floor(review.rating) === star
+                              ).length || 0;
+
+                            // Calculate percentage
+                            const percentage =
+                              reviewsCount > 0
+                                ? Math.round((starCount / reviewsCount) * 100)
+                                : 0;
+
+                            return (
+                              <div
+                                key={star}
+                                className="flex items-center gap-2"
+                              >
+                                <span className="text-sm text-gray-600 w-4">
+                                  {star}
+                                </span>
+                                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-yellow-500 h-2 rounded-full transition-all duration-500"
+                                    style={{
+                                      width: `${percentage}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-sm text-gray-600 w-8">
+                                  {percentage}%
+                                </span>
+                              </div>
+                            );
+                          })
+                        : // Show empty progress bars when no reviews
+                          [5, 4, 3, 2, 1].map((star) => (
+                            <div key={star} className="flex items-center gap-2">
+                              <span className="text-sm text-gray-600 w-4">
+                                {star}
+                              </span>
+                              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="bg-gray-300 h-2 rounded-full"
+                                  style={{ width: "0%" }}
+                                />
+                              </div>
+                              <span className="text-sm text-gray-600 w-8">
+                                0%
+                              </span>
+                            </div>
+                          ))}
                     </div>
                   </div>
 
+                  {/* Reviews List */}
                   <div className="space-y-4">
                     {product.reviews && product.reviews.length > 0 ? (
                       product.reviews.map((review, index) => (
@@ -792,7 +982,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                     Free Shipping
                   </h4>
                   <p className="text-gray-600 text-xs">
-                    {shippingInfo.delivery}
+                    {shippingInfo.delivery || "Fast delivery"}
                   </p>
                 </div>
               )}

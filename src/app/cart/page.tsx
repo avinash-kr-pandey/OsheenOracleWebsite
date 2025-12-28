@@ -15,6 +15,11 @@ export default function CartPage() {
     getTotalItems,
   } = useCart();
 
+
+  const handlePayment = () => {
+    window.location.href = "/getway";
+  }
+
   if (cartItems.length === 0) {
     return (
       <div
@@ -165,12 +170,14 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <button className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-xl font-bold text-lg hover:scale-105 transition-all duration-300 shadow-lg mb-4">
+              <button className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-xl font-bold text-lg hover:scale-105 transition-all duration-300 shadow-lg mb-4"
+               onClick={handlePayment}
+              >
                 Proceed to Checkout
               </button>
 
               <Link
-                href="/"
+                href="/products"
                 className="w-full border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-bold text-lg text-center block hover:border-pink-400 hover:text-pink-600 transition-all duration-300"
               >
                 Continue Shopping

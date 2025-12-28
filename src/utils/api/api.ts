@@ -1,4 +1,6 @@
+// src/utils/api/api.ts - FINAL VERSION
 import axios, { AxiosError, AxiosResponse } from "axios";
+import { Product, Review, isProduct, normalizeProduct } from "@/types/product";
 
 const API_BASE_URL = "https://osheenoraclebackend-1.onrender.com/api";
 
@@ -191,100 +193,107 @@ export const apiRequest = async <T = unknown>(
    PRODUCT-SPECIFIC APIs
 ======================= */
 
-// Product Interface
-export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  image: string;
-  images: string[];
-  category: string;
-  brand: string;
-  gender: string[];
-  isNew: boolean;
-  rating: number;
-  size?: string[];
-  color?: string[];
-  description?: string;
-  features?: {
-    freeShipping: boolean;
-    returns: string;
-    warranty: string;
-    authentic: boolean;
-  };
-  shippingInfo?: {
-    delivery: string;
-    returnPolicy: string;
-    securePayment: boolean;
-  };
-  reviews?: Review[];
-}
-
-export interface Review {
-  name: string;
-  comment: string;
-  rating: number;
-  date: string;
-  avatar: string;
-}
-
-
+// Fetch all products
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
     console.log("🔍 Fetching products from API...");
-    
-    // Use unknown instead of any
+
     const response = await fetchData<unknown>("/products");
-    
-    console.log("🔍 API Response:", response);
-    
-    // Check different response formats with proper type checking
+    console.log("🔍 API Response type:", typeof response);
+
     if (Array.isArray(response)) {
       console.log("✅ Products received as array");
-      // Type guard to ensure it's an array of Product
-      return response as Product[];
-    } else if (response && typeof response === 'object') {
+      // Normalize each product
+      return response.map(normalizeProduct);
+    } else if (response && typeof response === "object") {
       const responseObj = response as Record<string, unknown>;
       
-      // Check for common response formats with type safety
+      let productsArray: any[] = [];
+      
+      // Check for common response formats
       if (Array.isArray(responseObj.data)) {
         console.log("✅ Products found in response.data");
-        return responseObj.data as Product[];
+        productsArray = responseObj.data;
       } else if (Array.isArray(responseObj.products)) {
         console.log("✅ Products found in response.products");
-        return responseObj.products as Product[];
+        productsArray = responseObj.products;
       } else if (Array.isArray(responseObj.items)) {
         console.log("✅ Products found in response.items");
-        return responseObj.items as Product[];
+        productsArray = responseObj.items;
       } else if (Array.isArray(responseObj.result)) {
         console.log("✅ Products found in response.result");
-        return responseObj.result as Product[];
+        productsArray = responseObj.result;
       } else {
         console.warn("⚠️ Unexpected response format:", response);
         return [];
       }
+      
+      // Normalize all products
+      return productsArray.map(normalizeProduct);
     }
-    
+
     console.error("❌ Invalid response format");
     return [];
   } catch (error: unknown) {
     console.error("❌ Error fetching products:", error);
-    return []; // Return empty array instead of throwing
+    return [];
   }
 };
-// Fetch single product by ID
+
+// Fetch product by ID
 export const fetchProductById = async (
   id: number | string
 ): Promise<Product> => {
   try {
-    console.log("🔍 fetchProductById called with ID:", id);
-    console.log("🔍 ID type:", typeof id);
+    const _id = typeof id === "string" ? id : id.toString();
+    console.log("🔄 Fetching product with ID:", _id);
     
-    const product = await fetchData<Product>(`/products/${id}`);
+    // Fetch data
+    const response = await fetchData<any>(`/products/${_id}`);
+    console.log("🔍 Full API Response:", response);
     
-    console.log("✅ Product fetched successfully");
-    console.log("🔍 Product ID from API:", product.id);
-    console.log("🔍 Product ID type from API:", typeof product.id);
+    // Extract product data - handle different response structures
+    let productData;
+    if (response && typeof response === 'object') {
+      // Check for nested product data
+      if (response.data && typeof response.data === 'object') {
+        productData = response.data;
+      } else if (response.product && typeof response.product === 'object') {
+        productData = response.product;
+      } else if (response.item && typeof response.item === 'object') {
+        productData = response.item;
+      } else if (response.result && typeof response.result === 'object') {
+        productData = response.result;
+      } else {
+        // Use response directly
+        productData = response;
+      }
+    } else {
+      productData = response;
+    }
+    
+    console.log("📦 Extracted product data:", productData);
+    
+    if (!productData) {
+      console.error("❌ No product data in response");
+      throw new Error("Product data not found in API response");
+    }
+    
+    // Normalize the product data
+    const product = normalizeProduct(productData);
+    
+    // Validate with isProduct type guard
+    if (!isProduct(product)) {
+      console.error("❌ Invalid product data structure:", product);
+      throw new Error("Invalid product data structure received");
+    }
+    
+    console.log("✅ Final product object:", {
+      _id: product._id,
+      id: product.id,
+      name: product.name,
+      price: product.price
+    });
     
     return product;
   } catch (error) {
@@ -292,13 +301,29 @@ export const fetchProductById = async (
     throw error;
   }
 };
+
 // Search products by name or keyword
 export const searchProducts = async (query: string): Promise<Product[]> => {
   try {
-    const products = await fetchData<Product[]>("/products/search", {
-      q: query,
-    });
-    return products;
+    const response = await fetchData<any>("/products/search", { q: query });
+    
+    let productsArray: any[] = [];
+    if (Array.isArray(response)) {
+      productsArray = response;
+    } else if (response && typeof response === "object") {
+      const responseObj = response as Record<string, any>;
+      if (Array.isArray(responseObj.data)) {
+        productsArray = responseObj.data;
+      } else if (Array.isArray(responseObj.products)) {
+        productsArray = responseObj.products;
+      } else if (Array.isArray(responseObj.items)) {
+        productsArray = responseObj.items;
+      } else if (Array.isArray(responseObj.result)) {
+        productsArray = responseObj.result;
+      }
+    }
+    
+    return productsArray.map(normalizeProduct);
   } catch (error) {
     console.error(`Error searching products for "${query}":`, error);
     throw error;
@@ -310,10 +335,23 @@ export const fetchProductsByCategory = async (
   category: string
 ): Promise<Product[]> => {
   try {
-    const products = await fetchData<Product[]>("/products/category", {
-      category,
-    });
-    return products;
+    const response = await fetchData<any>("/products/category", { category });
+    
+    let productsArray: any[] = [];
+    if (Array.isArray(response)) {
+      productsArray = response;
+    } else if (response && typeof response === "object") {
+      const responseObj = response as Record<string, any>;
+      if (Array.isArray(responseObj.data)) {
+        productsArray = responseObj.data;
+      } else if (Array.isArray(responseObj.products)) {
+        productsArray = responseObj.products;
+      } else if (Array.isArray(responseObj.items)) {
+        productsArray = responseObj.items;
+      }
+    }
+    
+    return productsArray.map(normalizeProduct);
   } catch (error) {
     console.error(`Error fetching products by category ${category}:`, error);
     throw error;
@@ -325,8 +363,21 @@ export const fetchProductsByBrand = async (
   brand: string
 ): Promise<Product[]> => {
   try {
-    const products = await fetchData<Product[]>("/products/brand", { brand });
-    return products;
+    const response = await fetchData<any>("/products/brand", { brand });
+    
+    let productsArray: any[] = [];
+    if (Array.isArray(response)) {
+      productsArray = response;
+    } else if (response && typeof response === "object") {
+      const responseObj = response as Record<string, any>;
+      if (Array.isArray(responseObj.data)) {
+        productsArray = responseObj.data;
+      } else if (Array.isArray(responseObj.products)) {
+        productsArray = responseObj.products;
+      }
+    }
+    
+    return productsArray.map(normalizeProduct);
   } catch (error) {
     console.error(`Error fetching products by brand ${brand}:`, error);
     throw error;
@@ -338,10 +389,21 @@ export const fetchFeaturedProducts = async (
   limit: number = 10
 ): Promise<Product[]> => {
   try {
-    const products = await fetchData<Product[]>("/products/featured", {
-      limit,
-    });
-    return products;
+    const response = await fetchData<any>("/products/featured", { limit });
+    
+    let productsArray: any[] = [];
+    if (Array.isArray(response)) {
+      productsArray = response;
+    } else if (response && typeof response === "object") {
+      const responseObj = response as Record<string, any>;
+      if (Array.isArray(responseObj.data)) {
+        productsArray = responseObj.data;
+      } else if (Array.isArray(responseObj.products)) {
+        productsArray = responseObj.products;
+      }
+    }
+    
+    return productsArray.map(normalizeProduct);
   } catch (error) {
     console.error("Error fetching featured products:", error);
     throw error;
@@ -353,8 +415,21 @@ export const fetchNewArrivals = async (
   limit: number = 10
 ): Promise<Product[]> => {
   try {
-    const products = await fetchData<Product[]>("/products/new", { limit });
-    return products;
+    const response = await fetchData<any>("/products/new", { limit });
+    
+    let productsArray: any[] = [];
+    if (Array.isArray(response)) {
+      productsArray = response;
+    } else if (response && typeof response === "object") {
+      const responseObj = response as Record<string, any>;
+      if (Array.isArray(responseObj.data)) {
+        productsArray = responseObj.data;
+      } else if (Array.isArray(responseObj.products)) {
+        productsArray = responseObj.products;
+      }
+    }
+    
+    return productsArray.map(normalizeProduct);
   } catch (error) {
     console.error("Error fetching new arrivals:", error);
     throw error;
@@ -367,11 +442,22 @@ export const fetchProductsByPriceRange = async (
   maxPrice: number
 ): Promise<Product[]> => {
   try {
-    const products = await fetchData<Product[]>("/products/price-range", {
+    const response = await fetchData<any>("/products/price-range", {
       min: minPrice,
       max: maxPrice,
     });
-    return products;
+    
+    let productsArray: any[] = [];
+    if (Array.isArray(response)) {
+      productsArray = response;
+    } else if (response && typeof response === "object") {
+      const responseObj = response as Record<string, any>;
+      if (Array.isArray(responseObj.data)) {
+        productsArray = responseObj.data;
+      }
+    }
+    
+    return productsArray.map(normalizeProduct);
   } catch (error) {
     console.error(
       `Error fetching products in price range ${minPrice}-${maxPrice}:`,
@@ -386,8 +472,20 @@ export const createProduct = async (
   productData: Partial<Product>
 ): Promise<Product> => {
   try {
-    const product = await postData<Product>("/products", productData);
-    return product;
+    const response = await postData<any>("/products", productData);
+    
+    let createdProduct;
+    if (response && typeof response === 'object') {
+      if (response.data && typeof response.data === 'object') {
+        createdProduct = response.data;
+      } else if (response.product && typeof response.product === 'object') {
+        createdProduct = response.product;
+      } else {
+        createdProduct = response;
+      }
+    }
+    
+    return normalizeProduct(createdProduct || response);
   } catch (error) {
     console.error("Error creating product:", error);
     throw error;
@@ -400,8 +498,20 @@ export const updateProduct = async (
   productData: Partial<Product>
 ): Promise<Product> => {
   try {
-    const product = await putData<Product>(`/products/${id}`, productData);
-    return product;
+    const response = await putData<any>(`/products/${id}`, productData);
+    
+    let updatedProduct;
+    if (response && typeof response === 'object') {
+      if (response.data && typeof response.data === 'object') {
+        updatedProduct = response.data;
+      } else if (response.product && typeof response.product === 'object') {
+        updatedProduct = response.product;
+      } else {
+        updatedProduct = response;
+      }
+    }
+    
+    return normalizeProduct(updatedProduct || response);
   } catch (error) {
     console.error(`Error updating product ${id}:`, error);
     throw error;
@@ -429,11 +539,23 @@ export const addProductReview = async (
   }
 ): Promise<Product> => {
   try {
-    const product = await postData<Product>(
+    const response = await postData<any>(
       `/products/${productId}/reviews`,
       reviewData
     );
-    return product;
+    
+    let updatedProduct;
+    if (response && typeof response === 'object') {
+      if (response.data && typeof response.data === 'object') {
+        updatedProduct = response.data;
+      } else if (response.product && typeof response.product === 'object') {
+        updatedProduct = response.product;
+      } else {
+        updatedProduct = response;
+      }
+    }
+    
+    return normalizeProduct(updatedProduct || response);
   } catch (error) {
     console.error(`Error adding review to product ${productId}:`, error);
     throw error;
@@ -487,7 +609,5 @@ export const getFilterOptions = async (): Promise<{
     throw error;
   }
 };
-
-
 
 export default api;

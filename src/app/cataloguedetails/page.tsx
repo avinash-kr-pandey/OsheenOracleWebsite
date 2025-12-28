@@ -56,8 +56,11 @@ const CataloguePage = () => {
   const enhancedZodiacData: Zodiac[] = zodiacData.map((zodiac, index) => ({
     ...zodiac,
     category: ["Love", "Career", "Personal", "Spiritual"][index % 4],
-    rating: zodiac.rating ?? 4.5,
-    price: typeof zodiac.price === "string" ? parseFloat(zodiac.price) : zodiac.price,
+    rating: zodiac?.rating ?? 4.5,
+    price:
+      typeof zodiac.price === "string"
+        ? parseFloat(zodiac.price)
+        : zodiac.price,
   }));
 
   // Get unique categories
