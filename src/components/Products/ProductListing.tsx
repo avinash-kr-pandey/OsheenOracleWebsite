@@ -56,6 +56,7 @@ const ProductListing: React.FC = () => {
           if (!product || typeof product !== "object") {
             return {
               id: String(index + 1),
+              _id: String(index + 1),
               name: "Unknown Product",
               price: 0,
               image: "/placeholder.jpg",
@@ -146,7 +147,7 @@ const ProductListing: React.FC = () => {
       if (
         selectedGenders.length > 0 &&
         (!product.gender ||
-          !selectedGenders.some((g) => product.gender.includes(g)))
+          !selectedGenders.some((g) => product.gender?.includes(g)))
       )
         return false;
 
