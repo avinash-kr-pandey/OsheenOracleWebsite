@@ -17,19 +17,14 @@ import {
   Target,
   Globe,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { astrologers, zodiacData } from "@/utils/AstroData";
 import CommonPageHeader from "@/components/CommonPages/CommonPageHeader";
 
-interface PageProps {
-  params: {
-    id: string;
-  };
-}
-
-const ZodiacDetails: React.FC<PageProps> = ({ params }) => {
-  const { id } = params;
+const ZodiacDetails = () => {
+  const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
   const [selectedAstrologer, setSelectedAstrologer] = useState<number | null>(
     null

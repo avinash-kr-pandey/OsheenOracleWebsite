@@ -2,12 +2,14 @@
 
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
-import { FaAppleAlt, FaArrowLeft } from "react-icons/fa";
+import { FaApple, FaArrowLeft } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { toast, Toaster } from "react-hot-toast";
 import { postData } from "../../utils/api/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import PolicyModal from "@/components/Modals/PolicyModal";
+import { FaEye, FaEyeSlash } from "react-icons/fa6";
 
 // Define types for API responses
 interface AuthResponse {
@@ -65,6 +67,10 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [resetToken, setResetToken] = useState("");
   const [otpId, setOtpId] = useState("");
+  const [openModal, setOpenModal] = useState<"privacy" | "terms" | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const router = useRouter();
   const {
@@ -535,14 +541,24 @@ const Login = () => {
           className="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 text-sm md:text-base"
           required
         />
-        <input
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 text-sm md:text-base"
-          required
-        />
+        <div className="relative w-full">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Enter Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer 
+            transition-all duration-300"
+          >
+            {showPassword ? "🙈" : "👁️"}
+          </button>
+        </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <button
@@ -592,7 +608,7 @@ const Login = () => {
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="flex items-center justify-center gap-2 w-full border border-gray-300 py-2 rounded-lg hover:bg-gray-100 transition-all duration-300 text-sm md:text-base"
+            className="flex  cursor-pointer items-center justify-center gap-2 w-full border border-gray-300 py-2 rounded-lg hover:bg-gray-100 transition-all duration-300 text-sm md:text-base"
           >
             <FcGoogle size={18} className="md:size-[20px]" />
             <span>Google</span>
@@ -600,28 +616,29 @@ const Login = () => {
           <button
             type="button"
             onClick={handleAppleLogin}
-            className="flex items-center justify-center gap-2 w-full border border-gray-300 py-2 rounded-lg hover:bg-gray-100 transition-all duration-300 text-sm md:text-base"
+            className="flex items-center justify-center gap-2 w-full border border-gray-300 py-2 rounded-lg hover:bg-gray-100 
+            transition-all duration-300 text-sm md:text-base cursor-pointer"
           >
-            <FaAppleAlt size={16} className="text-[#0078D4] md:size-[18px]" />
+            <FaApple size={16} className="text-[#0078D4] md:size-[18px]" />
             <span>Apple</span>
           </button>
         </div>
 
         <p className="text-xs text-gray-500 text-center mt-4 md:mt-6 leading-5">
           Protected by reCAPTCHA and subject to the{" "}
-          <a
-            href="#"
+          <button
+            onClick={() => setOpenModal("privacy")}
             className="underline text-black hover:text-gray-700 transition-colors"
           >
             Privacy Policy
-          </a>{" "}
+          </button>{" "}
           and{" "}
-          <a
-            href="#"
+          <button
+            onClick={() => setOpenModal("terms")}
             className="underline text-black hover:text-gray-700 transition-colors"
           >
             Terms of Service
-          </a>
+          </button>
           .
         </p>
       </div>
@@ -709,23 +726,43 @@ const Login = () => {
         </p>
       </div>
 
-      <input
-        placeholder="New Password"
-        type="password"
-        value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-        className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 text-sm md:text-base"
-        required
-      />
+      <div className="relative">
+        <input
+          placeholder="New Password"
+          type={showNewPassword ? "text" : "password"}
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          className="w-full p-3 pr-12 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 text-sm md:text-base"
+          required
+        />
 
-      <input
-        placeholder="Confirm Password"
-        type="password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 text-sm md:text-base"
-        required
-      />
+        <button
+          type="button"
+          onClick={() => setShowNewPassword(!showNewPassword)}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-800"
+        >
+          {showNewPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+        </button>
+      </div>
+
+      <div className="relative">
+        <input
+          placeholder="Confirm Password"
+          type={showConfirmPassword ? "text" : "password"}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="w-full p-3 pr-12 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 text-sm md:text-base"
+          required
+        />
+
+        <button
+          type="button"
+          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-800"
+        >
+          {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+        </button>
+      </div>
 
       <button
         type="submit"
@@ -777,22 +814,41 @@ const Login = () => {
           className="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 text-sm md:text-base"
           required
         />
-        <input
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 text-sm md:text-base"
-          required
-        />
-        <input
-          placeholder="Confirm Password"
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 text-sm md:text-base"
-          required
-        />
+        <div className="relative">
+          <input
+            placeholder="Password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-3 pr-12 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer"
+          >
+            {showPassword ? <FaEyeSlash /> : <FaEye />}
+          </button>
+        </div>
+
+        <div className="relative">
+          <input
+            placeholder="Confirm Password"
+            type={showConfirmPassword ? "text" : "password"}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full  p-3 pr-12 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer"
+          >
+            {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+          </button>
+        </div>
 
         <div className="flex items-start">
           <input
@@ -804,14 +860,14 @@ const Login = () => {
           <label htmlFor="terms" className="text-xs md:text-sm text-gray-600">
             I agree to the{" "}
             <a
-              href="#"
+              onClick={() => setOpenModal("terms")}
               className="underline text-black hover:text-gray-700 transition-colors"
             >
               Terms of Service
             </a>{" "}
             and{" "}
             <a
-              href="#"
+              onClick={() => setOpenModal("privacy")}
               className="underline text-black hover:text-gray-700 transition-colors"
             >
               Privacy Policy
@@ -858,7 +914,7 @@ const Login = () => {
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="flex items-center justify-center gap-2 w-full border border-gray-300 py-2 rounded-lg hover:bg-gray-100 transition-all duration-300 text-sm md:text-base"
+            className="flex cursor-pointer items-center justify-center gap-2 w-full border border-gray-300 py-2 rounded-lg hover:bg-gray-100 transition-all duration-300 text-sm md:text-base"
           >
             <FcGoogle size={18} className="md:size-[20px]" />
             <span>Google</span>
@@ -866,28 +922,29 @@ const Login = () => {
           <button
             type="button"
             onClick={handleAppleLogin}
-            className="flex items-center justify-center gap-2 w-full border border-gray-300 py-2 rounded-lg hover:bg-gray-100 transition-all duration-300 text-sm md:text-base"
+            className="flex items-center justify-center gap-2 w-full border border-gray-300 py-2 rounded-lg hover:bg-gray-100 transition-all duration-300 text-sm md:text-base
+            cursor-pointer"
           >
-            <FaAppleAlt size={16} className="text-[#0078D4] md:size-[18px]" />
+            <FaApple size={16} className="text-[#0078D4] md:size-[18px]" />
             <span>Apple</span>
           </button>
         </div>
 
         <p className="text-xs text-gray-500 text-center mt-4 md:mt-6 leading-5">
           Protected by reCAPTCHA and subject to the{" "}
-          <a
-            href="#"
-            className="underline text-black hover:text-gray-700 transition-colors"
+          <button
+            onClick={() => setOpenModal("privacy")}
+            className="underline text-black hover:text-gray-700 transition-colors hover:text-gray-700 transition-colors"
           >
             Privacy Policy
-          </a>{" "}
+          </button>{" "}
           and{" "}
-          <a
-            href="#"
+          <button
+            onClick={() => setOpenModal("terms")}
             className="underline text-black hover:text-gray-700 transition-colors"
           >
             Terms of Service
-          </a>
+          </button>
           .
         </p>
       </div>
@@ -950,56 +1007,70 @@ const Login = () => {
       <div className="w-full flex flex-col lg:flex-row justify-between items-center px-4 sm:px-8 md:px-16 py-6 md:py-10 gap-8 md:gap-0 md:pt-0 pt-30">
         {/* Background circular image */}
         <Image
-          src="/images/roundimage.png"
+          src="/images/fullrounded.png"
           alt="background illustration"
           width={650}
           height={650}
-          className="absolute opacity-80 md:opacity-70 md:pt-10 pt-0 rotate-slow rounded-full"
+          className="absolute opacity-80 md:opacity-70 md:pt-10 pt-0 rounded-full animate-spin-slow p-5 rounded-full pointer-events-none select-none 
+          hidden md:block"
+          style={{ animationDuration: "30s" }}
         />
 
         {/* Text content - Hidden on small screens, visible on medium and above */}
-        <div className="relative z-10 px-4 lg:px-6 text-center md:text-left w-full lg:w-auto md:h-auto h-[60vh]">
-          <div className="lg:block pt-20">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#636363] mb-3 lg:mb-4">
-              One tool for your
+        <div className="relative z-10 px-4 lg:px-6 text-center md:text-left w-full lg:w-auto md:h-auto h-[60vh] flex flex-col justify-center">
+          <div className="lg:block pt-10 md:pt-20">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semifont text-[#636363] mb-3 lg:mb-4">
+              One Tool For Four
             </h1>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#636363] mb-4 lg:mb-6">
-              whole team needs
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semifont text-[#636363] mb-4 lg:mb-6">
+              Whole Team Needs
             </h1>
 
-            <p className="text-gray-600 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 mb-4 lg:mb-6">
-              We are lorem ipsum team dolor sit amet, consectetur adipiscing
-              elit, sed do eiusmod tempor incididunt ut labore et dolore magna
-              aliqua.
-            </p>
+           <p className="text-gray-600 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 mb-4 lg:mb-6 text-justify">
+  We are lorem ipsum team dolor sit amet, consectetur adipiscing
+  elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+  aliqua.
+</p>
+
 
             {/* Avatars + text */}
-            <div className="flex flex-col sm:flex-row justify-center lg:justify-start items-center space-y-3 sm:space-y-0 sm:space-x-3 mt-4">
-              <div className="flex -space-x-3">
-                <Image
-                  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRjSoKn8IQb33N82TB_LkwVNhgHmlqTuZTcWA&s"
-                  alt="user1"
-                  width={32}
-                  height={32}
-                  className="rounded-full border-2 border-white transition-all duration-300 hover:scale-110 w-8 h-8 sm:w-10 sm:h-10"
-                />
-                <Image
-                  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRjSoKn8IQb33N82TB_LkwVNhgHmlqTuZTcWA&s"
-                  alt="user2"
-                  width={32}
-                  height={32}
-                  className="rounded-full border-2 border-white transition-all duration-300 hover:scale-110 w-8 h-8 sm:w-10 sm:h-10"
-                />
-                <Image
-                  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRjSoKn8IQb33N82TB_LkwVNhgHmlqTuZTcWA&s"
-                  alt="user3"
-                  width={32}
-                  height={32}
-                  className="rounded-full border-2 border-white transition-all duration-300 hover:scale-110 w-8 h-8 sm:w-10 sm:h-10"
-                />
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mt-4">
+              <div className="flex items-center">
+                <div className="flex -space-x-3">
+                  {/* Using different avatar images for variety */}
+                  <Image
+                    src="https://thumbs.dreamstime.com/b/young-handsome-man-black-suit-young-handsome-man-black-suit-official-studio-portrait-368118847.jpg"
+                    alt="user1"
+                    width={40}
+                    height={40}
+                    className="rounded-full border-2 border-white transition-all duration-300 hover:scale-110 w-10 h-10 sm:w-12 sm:h-12"
+                  />
+                  <Image
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80"
+                    alt="user2"
+                    width={40}
+                    height={40}
+                    className="rounded-full border-2 border-white transition-all duration-300 hover:scale-110 w-10 h-10 sm:w-12 sm:h-12"
+                  />
+                  <Image
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80"
+                    alt="user3"
+                    width={40}
+                    height={40}
+                    className="rounded-full border-2 border-white transition-all duration-300 hover:scale-110 w-10 h-10 sm:w-12 sm:h-12"
+                  />
+                </div>
+                <div className="ml-8 flex items-center">
+                  {/* Plus sign and count */}
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-full border-2 border-white flex items-center justify-center -ml-4">
+                    <span className="text-gray-700 font-bold text-sm sm:text-base">
+                      +3K
+                    </span>
+                  </div>
+                </div>
               </div>
-              <span className="text-gray-700 text-xs sm:text-sm font-medium">
-                3k+ people joined us, now it&apos;s your turn
+              <span className="text-gray-700 text-sm sm:text-base font-medium whitespace-nowrap">
+                people joined us, now it&apos;s your turn
               </span>
             </div>
           </div>
@@ -1022,6 +1093,18 @@ const Login = () => {
           </div>
         </div>
       </div>
+
+      <PolicyModal
+        isOpen={openModal === "privacy"}
+        onClose={() => setOpenModal(null)}
+        defaultTab="privacy"
+      />
+
+      <PolicyModal
+        isOpen={openModal === "terms"}
+        onClose={() => setOpenModal(null)}
+        defaultTab="terms"
+      />
     </div>
   );
 };

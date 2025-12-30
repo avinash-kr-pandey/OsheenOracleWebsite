@@ -37,7 +37,7 @@ const mediaData = [
 const MediaSpotlight = () => {
   return (
     <div
-      className="py-12 px-6 flex flex-col items-center"
+      className="py-12 flex flex-col items-center max-w-6xl mx-auto"
       style={{
         backgroundImage: "url('/images/roundimage.png')",
         backgroundRepeat: "no-repeat",
@@ -46,10 +46,10 @@ const MediaSpotlight = () => {
         fontFamily: "var(--font-montserrat)",
       }}
     >
-      <h2 className="text-4xl sm:text-4xl md:text-5xl text-[#3D2E4F] mb-2">
+      <h2 className="text-4xl sm:text-4xl md:text-5xl text-[#3D2E4F] mb-2 font-bold text-center">
         Media Spotlight
       </h2>
-      <p className="mb-8 text-center text-sm text-[#3D2E4F] max-w-xl">
+      <p className="mb-8 text-center text-sm text-[#3D2E4F] max-w-xl font-bold">
         Featured by India’s leading media platforms for excellence and trust.
       </p>
 

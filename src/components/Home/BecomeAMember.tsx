@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, ChangeEvent, FormEvent } from "react";
+import React, { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 // Types
@@ -7,6 +7,7 @@ interface FormDataType {
   name: string;
   email: string;
   phone: string;
+  countryCode: string;
   plan: string;
   newsletter: boolean;
 }
@@ -42,6 +43,26 @@ interface AddOn {
   service: string;
   price: string;
 }
+
+interface CountryCode {
+  code: string;
+  name: string;
+  flag: string;
+}
+
+// Country codes data
+const countryCodes: CountryCode[] = [
+  { code: "+91", name: "India", flag: "🇮🇳" },
+  { code: "+1", name: "USA/Canada", flag: "🇺🇸" },
+  { code: "+44", name: "UK", flag: "🇬🇧" },
+  { code: "+61", name: "Australia", flag: "🇦🇺" },
+  { code: "+49", name: "Germany", flag: "🇩🇪" },
+  { code: "+33", name: "France", flag: "🇫🇷" },
+  { code: "+81", name: "Japan", flag: "🇯🇵" },
+  { code: "+971", name: "UAE", flag: "🇦🇪" },
+  { code: "+65", name: "Singapore", flag: "🇸🇬" },
+  { code: "+60", name: "Malaysia", flag: "🇲🇾" },
+];
 
 // Data
 const membershipPlans: MembershipPlan[] = [
@@ -186,23 +207,72 @@ const BecomeAMember: React.FC = () => {
     name: "",
     email: "",
     phone: "",
+    countryCode: "+91",
     plan: "",
     newsletter: true,
   });
 
+  const [errors, setErrors] = useState<Partial<FormDataType & { phone: string }>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
   const router = useRouter();
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    const { name, value, type, checked } = e.target;
+  // Validation function
+  const validateForm = (): boolean => {
+    const newErrors: Partial<FormDataType & { phone: string }> = {};
+
+    // Name validation
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email) {
+      newErrors.email = "Email is required";
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    // Phone validation
+    const phoneDigits = formData.phone.replace(/\D/g, '');
+    if (formData.phone && phoneDigits.length < 10) {
+      newErrors.phone = "Phone number must be at least 10 digits";
+    }
+
+    // Plan validation
+    if (!formData.plan) {
+      newErrors.plan = "Please select a spiritual plan";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
+    const { name, value, type, checked } = e.target as HTMLInputElement;
     setFormData((prev: FormDataType) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+    
+    // Clear error when user starts typing
+    if (errors[name as keyof typeof errors]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const handleCountryCodeChange = (e: ChangeEvent<HTMLSelectElement>): void => {
+    setFormData((prev: FormDataType) => ({ ...prev, countryCode: e.target.value }));
   };
 
   const handlePlanSelect = (planId: string): void => {
     setFormData((prev: FormDataType) => ({ ...prev, plan: planId }));
+    if (errors.plan) {
+      setErrors((prev) => ({ ...prev, plan: undefined }));
+    }
   };
 
   const handlePlanDetails = (planId: string): void => {
@@ -211,13 +281,13 @@ const BecomeAMember: React.FC = () => {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-
-    if (!formData.plan) {
-      alert("Please select a spiritual plan to continue");
+    
+    if (!validateForm()) {
       return;
     }
 
     setIsSubmitting(true);
+    setFormSubmitted(true);
 
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -225,51 +295,82 @@ const BecomeAMember: React.FC = () => {
     alert(
       `🔮 Welcome to Osheen Oracle, ${formData.name}! Your ${
         membershipPlans.find((p) => p.id === formData.plan)?.name
-      } membership is now active!`
+      } membership is now active! We'll contact you at ${formData.email}${formData.phone ? ` and ${formData.countryCode} ${formData.phone}` : ''}.`
     );
+    
     setIsSubmitting(false);
+    
+    // Reset form after successful submission
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      countryCode: "+91",
+      plan: "",
+      newsletter: true,
+    });
+    setFormSubmitted(false);
   };
+
+  // Auto-hide success message
+  useEffect(() => {
+    if (formSubmitted) {
+      const timer = setTimeout(() => {
+        setFormSubmitted(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [formSubmitted]);
 
   return (
     <div
-      className="min-h-screen"
-      style={{ fontFamily: "var(--font-montserrat)" }}
+      className="min-h-screen overflow-hidden relative"
+      style={{ 
+        fontFamily: "var(--font-montserrat)",
+        background: "linear-gradient(135deg, #fce7f3 0%, #e0f2fe 100%)"
+      }}
     >
-      {/* Floating Elements */}
-      <div className="fixed top-20 left-10 w-20 h-20 bg-purple-200 rounded-full opacity-20 blur-xl animate-pulse"></div>
-      <div className="fixed bottom-40 right-20 w-16 h-16 bg-indigo-300 rounded-full opacity-30 blur-lg animate-bounce"></div>
-      <div className="fixed top-1/3 right-1/4 w-12 h-12 bg-pink-300 rounded-full opacity-40 blur-md animate-pulse"></div>
+      {/* Animated Background Elements */}
+      <div className="fixed top-0 left-0 right-0 bottom-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-64 h-64 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-bounce-slow"></div>
+        <div className="absolute top-1/2 left-1/4 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-spin-slow"></div>
+        <div className="absolute top-1/3 right-1/3 w-48 h-48 bg-indigo-200 rounded-full mix-blend-multiply filter blur-2xl opacity-25 animate-ping-slow"></div>
+      </div>
 
       {/* Hero Section */}
       <section className="relative pt-24 pb-28 overflow-hidden">
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center px-5 py-2.5 rounded-full bg-purple-100/50 border border-purple-200 mb-8">
-            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-2 animate-ping"></span>
+          <div className="inline-flex items-center px-5 py-2.5 rounded-full bg-white/80 backdrop-blur-sm border border-purple-200/50 mb-8 animate-fade-in">
+            <span className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mr-2 animate-ping"></span>
             <span className="text-purple-700 font-medium text-sm">
               Join 5,000+ Spiritual Seekers
             </span>
           </div>
 
-          <h1 className="text-4xl md:text-6xl text-gray-900 mb-6 leading-tight">
+          <h1 className="text-4xl md:text-6xl text-gray-900 mb-6 leading-tight animate-slide-up">
             Awaken Your{" "}
             <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
               Spiritual Journey
             </span>
           </h1>
 
-          <p className="text-lg md:text-xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-gray-700 mb-12 max-w-3xl mx-auto leading-relaxed animate-slide-up animation-delay-200">
             Join Osheen Oracle&rsquo;s sacred community where ancient wisdom
             meets modern spirituality. Transform your life with divine guidance
             and energetic healing.
           </p>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto animate-slide-up animation-delay-400">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-2xl md:text-3xl  bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
+              <div 
+                key={index} 
+                className="text-center bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 border border-white/20"
+              >
+                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
                   {stat.number}
                 </div>
-                <div className="text-gray-600 font-medium mt-1 text-sm">
+                <div className="text-gray-600 font-medium mt-2 text-sm">
                   {stat.label}
                 </div>
               </div>
@@ -281,87 +382,89 @@ const BecomeAMember: React.FC = () => {
       {/* Membership Plans - Improved Section */}
       <section className="py-20 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl  text-gray-900 mb-4">
+          <div className="text-center mb-16 animate-fade-in">
+            <h2 className="text-3xl md:text-5xl text-gray-900 mb-4">
               Choose Your{" "}
               <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
                 Spiritual Path
               </span>
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg text-gray-700 max-w-2xl mx-auto">
               Each plan is crafted to support your unique spiritual journey and
               personal growth
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 max-w-7xl mx-auto">
-            {membershipPlans.map((plan) => (
+            {membershipPlans.map((plan, index) => (
               <div
-                key={plan.id} 
-                onClick={() => handlePlanSelect(plan.id)}
-                className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 h-full flex flex-col ${
-                  formData.plan === plan.id
-                    ? "border-purple-500 bg-white"
-                    : "border-gray-300 bg-white hover:border-purple-300"
-                }`}
+                key={plan.id}
+                className={`animate-slide-up animation-delay-${index * 100}`}
               >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-pink-400 to-purple-400 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-md">
-                      ⭐ Most Popular ⭐
-                    </span>
+                <div
+                  onClick={() => handlePlanSelect(plan.id)}
+                  className={`p-6 border-2 rounded-2xl cursor-pointer transition-all duration-300 h-full flex flex-col transform hover:-translate-y-2 hover:shadow-xl ${
+                    formData.plan === plan.id
+                      ? "border-purple-500 bg-white/90 backdrop-blur-sm shadow-lg"
+                      : "border-white/50 bg-white/80 backdrop-blur-sm hover:border-purple-300"
+                  }`}
+                >
+                 
+
+                  <div className="text-center mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-3 leading-tight">
+                      {plan.name}
+                    </h3>
+                    <div className="flex items-baseline justify-center mb-2">
+                      <span className="text-3xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
+                        {plan.price}
+                      </span>
+                      <span className="text-gray-600 ml-2 text-lg">
+                        /{plan.period}
+                      </span>
+                    </div>
                   </div>
-                )}
 
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 leading-tight">
-                    {plan.name}
-                  </h3>
-                  <div className="flex items-baseline justify-center mb-2">
-                    <span className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
-                      {plan.price}
-                    </span>
-                    <span className="text-gray-600 ml-1 text-lg">
-                      /{plan.period}
-                    </span>
+                  <div className="flex-grow mb-6">
+                    <ul className="space-y-3">
+                      {plan.features.map((feature, index) => (
+                        <li 
+                          key={index} 
+                          className="flex items-start text-left animate-fade-in"
+                          style={{ animationDelay: `${index * 50}ms` }}
+                        >
+                          <span className="text-purple-500 mr-3 mt-0.5 flex-shrink-0">
+                            ✨
+                          </span>
+                          <span className="text-gray-700 text-sm leading-relaxed">
+                            {feature}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </div>
 
-                <div className="flex-grow mb-6">
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-start text-left">
-                        <span className="text-purple-500 mr-2 mt-0.5 flex-shrink-0">
-                          ✨
-                        </span>
-                        <span className="text-gray-700 text-sm leading-relaxed">
-                          {feature}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                  <div className="space-y-3 mt-auto">
+                    <button
+                      onClick={() => handlePlanSelect(plan.id)}
+                      className={`w-full py-3 px-4 rounded-xl font-semibold text-base transition-all duration-300 transform hover:scale-[1.02] ${
+                        formData.plan === plan.id
+                          ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg"
+                          : plan.popular
+                          ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:from-pink-600 hover:to-purple-600 shadow-lg"
+                          : "bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 shadow-md"
+                      }`}
+                    >
+                      {formData.plan === plan.id ? "✓ Selected" : "Select Plan"}
+                    </button>
 
-                <div className="space-y-3 mt-auto">
-                  <button
-                    onClick={() => handlePlanSelect(plan.id)}
-                    className={`w-full py-3 px-4 rounded-xl font-semibold text-base transition-all duration-300 ${
-                      formData.plan === plan.id
-                        ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg"
-                        : plan.popular
-                        ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:from-pink-600 hover:to-purple-600"
-                        : "bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600"
-                    }`}
-                  >
-                    {formData.plan === plan.id ? "✓ Selected" : "Select Plan"}
-                  </button>
-
-                  <button
-                    onClick={() => handlePlanDetails(plan.id)}
-                    className="w-full py-2 px-4 border border-purple-300 text-purple-600 rounded-xl font-medium text-sm hover:bg-purple-50 transition-all duration-300"
-                  >
-                    View Details →
-                  </button>
+                    <button
+                      onClick={() => handlePlanDetails(plan.id)}
+                      className="w-full py-2.5 px-4 border border-purple-300 text-purple-600 rounded-xl font-medium text-sm hover:bg-purple-50/50 transition-all duration-300 hover:border-purple-400"
+                    >
+                      View Details →
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -372,8 +475,8 @@ const BecomeAMember: React.FC = () => {
       {/* Benefits Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl  text-gray-900 mb-4">
+          <div className="text-center mb-16 animate-fade-in">
+            <h2 className="text-3xl md:text-5xl text-gray-900 mb-4">
               Divine{" "}
               <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
                 Benefits
@@ -385,13 +488,16 @@ const BecomeAMember: React.FC = () => {
             {benefits.map((benefit, index) => (
               <div
                 key={index}
-                className="p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300"
+                className="p-8 rounded-2xl bg-white/80 backdrop-blur-sm border border-white/50 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-slide-up"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="text-4xl mb-4">{benefit.icon}</div>
+                <div className="text-4xl mb-5 animate-bounce-slow">{benefit.icon}</div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">
                   {benefit.title}
                 </h3>
-                <p className="text-gray-600 text-sm">{benefit.description}</p>
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  {benefit.description}
+                </p>
               </div>
             ))}
           </div>
@@ -401,14 +507,14 @@ const BecomeAMember: React.FC = () => {
       {/* Add-ons Section */}
       <section className="py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-12 animate-fade-in">
+            <h2 className="text-3xl md:text-4xl text-gray-900 mb-4">
               Additional{" "}
               <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
                 Services
               </span>
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-700">
               Enhance your spiritual experience with these services
             </p>
           </div>
@@ -417,13 +523,14 @@ const BecomeAMember: React.FC = () => {
             {addOns.map((addOn, index) => (
               <div
                 key={index}
-                className="bg-gray-50 p-4 rounded-xl border border-gray-200"
+                className="bg-white/90 backdrop-blur-sm p-5 rounded-xl border border-white/50 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.02] animate-slide-up"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-800 font-medium">
+                  <span className="text-gray-800 font-medium text-sm">
                     {addOn.service}
                   </span>
-                  <span className="text-purple-600 font-bold">
+                  <span className="text-purple-600 font-bold text-lg">
                     {addOn.price}
                   </span>
                 </div>
@@ -436,8 +543,8 @@ const BecomeAMember: React.FC = () => {
       {/* Testimonials */}
       <section className="py-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-12 animate-fade-in">
+            <h2 className="text-3xl md:text-5xl text-gray-900 mb-4">
               Transformational{" "}
               <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
                 Stories
@@ -445,21 +552,22 @@ const BecomeAMember: React.FC = () => {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
               <div
                 key={index}
-                className="p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300"
+                className="p-8 rounded-2xl bg-white/90 backdrop-blur-sm border border-white/50 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-slide-up"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="text-3xl mb-3">{testimonial.avatar}</div>
-                <p className="text-gray-600 mb-4 italic text-sm">
-                  {testimonial.content}
+                <div className="text-4xl mb-5 animate-pulse">{testimonial.avatar}</div>
+                <p className="text-gray-700 mb-6 italic text-sm leading-relaxed">
+                  "{testimonial.content}"
                 </p>
                 <div>
                   <div className="font-bold text-gray-900 text-base">
                     {testimonial.name}
                   </div>
-                  <div className="text-gray-500 text-sm">
+                  <div className="text-gray-600 text-sm">
                     {testimonial.role}
                   </div>
                 </div>
@@ -472,22 +580,35 @@ const BecomeAMember: React.FC = () => {
       {/* Registration Form */}
       <section className="py-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10 border border-gray-200">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 md:p-10 border border-white/50">
+            {formSubmitted && (
+              <div className="mb-8 p-4 bg-gradient-to-r from-green-100 to-emerald-100 border border-green-200 rounded-2xl animate-fade-in">
+                <div className="flex items-center">
+                  <div className="text-2xl mr-3">✨</div>
+                  <div>
+                    <p className="text-green-800 font-medium">
+                      Form submitted successfully! We'll contact you shortly.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center mb-10 animate-fade-in">
+              <h2 className="text-3xl md:text-4xl text-gray-900 mb-4">
                 Begin Your{" "}
                 <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
                   Spiritual Transformation
                 </span>
               </h2>
-              <p className="text-lg text-gray-600">
+              <p className="text-lg text-gray-700">
                 Join Osheen Oracle and unlock your divine potential
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="animate-slide-up animation-delay-100">
                   <label
                     htmlFor="name"
                     className="block text-sm font-medium text-gray-700 mb-2"
@@ -501,11 +622,18 @@ const BecomeAMember: React.FC = () => {
                     required
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all duration-300 bg-white text-sm"
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-400 transition-all duration-300 bg-white/50 text-sm ${
+                      errors.name ? 'border-red-300' : 'border-gray-300'
+                    }`}
                     placeholder="Enter your full name"
                   />
+                  {errors.name && (
+                    <p className="mt-2 text-sm text-red-600 animate-shake">
+                      {errors.name}
+                    </p>
+                  )}
                 </div>
-                <div>
+                <div className="animate-slide-up animation-delay-200">
                   <label
                     htmlFor="email"
                     className="block text-sm font-medium text-gray-700 mb-2"
@@ -519,39 +647,72 @@ const BecomeAMember: React.FC = () => {
                     required
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all duration-300 bg-white text-sm"
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-400 transition-all duration-300 bg-white/50 text-sm ${
+                      errors.email ? 'border-red-300' : 'border-gray-300'
+                    }`}
                     placeholder="Enter your email"
                   />
+                  {errors.email && (
+                    <p className="mt-2 text-sm text-red-600 animate-shake">
+                      {errors.email}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div>
+              <div className="animate-slide-up animation-delay-300">
                 <label
                   htmlFor="phone"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
                   Phone Number (Optional)
                 </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all duration-300 bg-white text-sm"
-                  placeholder="Your contact number"
-                />
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <select
+                      id="countryCode"
+                      name="countryCode"
+                      value={formData.countryCode}
+                      onChange={handleCountryCodeChange}
+                      className="px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-400 transition-all duration-300 bg-white/50 text-sm w-32"
+                    >
+                      {countryCodes.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.flag} {country.code}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-grow">
+                    <input
+                      type="tel"
+                      id="phone"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-400 transition-all duration-300 bg-white/50 text-sm ${
+                        errors.phone ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      placeholder="Your contact number"
+                    />
+                  </div>
+                </div>
+                {errors.phone && (
+                  <p className="mt-2 text-sm text-red-600 animate-shake">
+                    {errors.phone}
+                  </p>
+                )}
               </div>
 
               {/* Improved Plan Selection in Form */}
-              <div>
+              <div className="animate-slide-up animation-delay-400">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Choose Your Spiritual Plan *
                 </label>
-                {!formData.plan && (
-                  <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-yellow-700 text-sm">
-                      Please select a plan to continue
+                {errors.plan && (
+                  <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl animate-shake">
+                    <p className="text-red-700 text-sm">
+                      {errors.plan}
                     </p>
                   </div>
                 )}
@@ -560,10 +721,10 @@ const BecomeAMember: React.FC = () => {
                     <div
                       key={plan.id}
                       onClick={() => handlePlanSelect(plan.id)}
-                      className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 h-full ${
+                      className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 h-full transform hover:scale-[1.02] ${
                         formData.plan === plan.id
-                          ? "border-purple-500 bg-purple-50 shadow-md"
-                          : "border-gray-300 bg-white hover:border-purple-300"
+                          ? "border-purple-500 bg-purple-50/50 shadow-md"
+                          : "border-gray-300 bg-white/80 hover:border-purple-300"
                       }`}
                     >
                       <div className="flex justify-between items-start mb-2">
@@ -571,12 +732,12 @@ const BecomeAMember: React.FC = () => {
                           {plan.name}
                         </span>
                         {plan.popular && (
-                          <span className="bg-pink-100 text-pink-700 px-2 py-1 rounded-full text-xs font-bold ml-2">
+                          <span className="bg-gradient-to-r from-pink-100 to-purple-100 text-pink-700 px-2 py-1 rounded-full text-xs font-bold ml-2">
                             Popular
                           </span>
                         )}
                       </div>
-                      <div className="text-purple-600 font-bold text-sm mb-1">
+                      <div className="text-purple-600 font-bold text-lg mb-1">
                         {plan.price}/{plan.period}
                       </div>
                       <div className="text-xs text-gray-600">
@@ -587,14 +748,14 @@ const BecomeAMember: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center p-3 bg-purple-50 rounded-xl border border-purple-100">
+              <div className="flex items-center p-4 bg-gradient-to-r from-purple-50/50 to-pink-50/50 rounded-xl border border-purple-100 animate-slide-up animation-delay-500">
                 <input
                   type="checkbox"
                   id="newsletter"
                   name="newsletter"
                   checked={formData.newsletter}
                   onChange={handleInputChange}
-                  className="w-4 h-4 text-purple-500 border-gray-300 rounded focus:ring-purple-400"
+                  className="w-5 h-5 text-purple-500 border-gray-300 rounded focus:ring-purple-400"
                 />
                 <label
                   htmlFor="newsletter"
@@ -608,12 +769,12 @@ const BecomeAMember: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting || !formData.plan}
-                className="w-full flex justify-center items-center bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 px-8 rounded-xl font-semibold text-base hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center items-center bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 px-8 rounded-xl font-semibold text-base hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg animate-slide-up animation-delay-600"
               >
                 {isSubmitting ? (
                   <span className="flex items-center justify-center text-sm">
                     <svg
-                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -635,13 +796,129 @@ const BecomeAMember: React.FC = () => {
                     Activating Your Spiritual Journey...
                   </span>
                 ) : (
-                  "🔮 Begin Your Spiritual Journey 🔮"
+                  <>
+                    <span className="mr-2 text-lg">🔮</span>
+                    Begin Your Spiritual Journey
+                    <span className="ml-2 text-lg">🔮</span>
+                  </>
                 )}
               </button>
             </form>
           </div>
         </div>
       </section>
+
+      {/* Custom CSS for animations */}
+      <style jsx>{`
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        
+        @keyframes bounceSlow {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
+        }
+        
+        @keyframes spinSlow {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
+        @keyframes pingSlow {
+          75%, 100% {
+            transform: scale(1.5);
+            opacity: 0;
+          }
+        }
+        
+        @keyframes shake {
+          0%, 100% {
+            transform: translateX(0);
+          }
+          10%, 30%, 50%, 70%, 90% {
+            transform: translateX(-5px);
+          }
+          20%, 40%, 60%, 80% {
+            transform: translateX(5px);
+          }
+        }
+        
+        .animate-slide-up {
+          animation: slideUp 0.6s ease-out forwards;
+        }
+        
+        .animate-fade-in {
+          animation: fadeIn 0.8s ease-out forwards;
+        }
+        
+        .animate-bounce-slow {
+          animation: bounceSlow 3s ease-in-out infinite;
+        }
+        
+        .animate-spin-slow {
+          animation: spinSlow 20s linear infinite;
+        }
+        
+        .animate-ping-slow {
+          animation: pingSlow 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        
+        .animate-shake {
+          animation: shake 0.5s ease-in-out;
+        }
+        
+        .animation-delay-100 {
+          animation-delay: 100ms;
+        }
+        
+        .animation-delay-200 {
+          animation-delay: 200ms;
+        }
+        
+        .animation-delay-300 {
+          animation-delay: 300ms;
+        }
+        
+        .animation-delay-400 {
+          animation-delay: 400ms;
+        }
+        
+        .animation-delay-500 {
+          animation-delay: 500ms;
+        }
+        
+        .animation-delay-600 {
+          animation-delay: 600ms;
+        }
+        
+        .animation-delay-700 {
+          animation-delay: 700ms;
+        }
+      `}</style>
     </div>
   );
 };

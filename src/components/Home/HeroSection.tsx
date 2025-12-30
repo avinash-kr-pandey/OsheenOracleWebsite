@@ -37,13 +37,73 @@ export default function HeroSection() {
             Let The Healing Begin
           </p>
 
-          {/* CTA Button */}
-          <Link
-            href="/booking/1"
-            className="mt-4 xs:mt-5 sm:mt-6 md:mt-8 lg:mt-10 bg-yellow-300 hover:bg-yellow-400 text-black font-bold px-6 py-3 xs:px-7 xs:py-3 sm:px-8 sm:py-4 md:px-10 md:py-4 rounded-xl text-base xs:text-lg sm:text-xl md:text-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg animate-fade-in-up animation-delay-400 whitespace-nowrap inline-block"
-          >
-            Book a Session
-          </Link>
+          {/* Buttons Container */}
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-center mt-4 xs:mt-5 sm:mt-6 md:mt-8 lg:mt-10">
+            {/* CTA Button - Book a Session - Purple Gradient */}
+            <Link
+              href="/booking"
+              className="relative group bg-gradient-to-r from-purple-600 via-purple-500 to-pink-500
+  hover:from-purple-700 hover:via-purple-600 hover:to-pink-600
+  text-white font-bold px-8 py-4 xs:px-9 xs:py-4 sm:px-10 sm:py-4 md:px-12 md:py-5
+  rounded-2xl text-base xs:text-lg sm:text-xl md:text-xl
+  transition-all duration-500 transform hover:scale-105 hover:shadow-2xl shadow-lg
+  animate-fade-in-up animation-delay-400 whitespace-nowrap inline-block
+  w-[90%] sm:w-auto text-center overflow-hidden"
+            >
+              {/* Shine effect */}
+              <span className="absolute top-0 left-0 w-1/3 h-full bg-gradient-to-r from-white/30 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-[400%] transition-all duration-700"></span>
+
+              <span className="relative flex items-center justify-center gap-2">
+                Book a Session
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 xs:h-6 xs:w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                  />
+                </svg>
+              </span>
+            </Link>
+
+            {/* Buy Product Button - Visible only on mobile - Gradient with icon */}
+            <Link
+              href="/products"
+              className="md:hidden w-[90%] sm:w-auto relative group bg-gradient-to-r from-amber-500 
+              via-yellow-400 to-orange-400 hover:from-amber-600 hover:via-yellow-500
+               hover:to-orange-500 text-black font-bold px-8 py-4 xs:px-9 xs:py-4 sm:px-10
+                sm:py-4 rounded-2xl text-base xs:text-lg sm:text-xl transition-all duration-500 
+                transform hover:scale-105 hover:shadow-2xl shadow-lg animate-fade-in-up animation-delay-600 
+                whitespace-nowrap inline-block text-center overflow-hidden border-2 border-amber-300"
+            >
+              {/* Pulse effect */}
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-all duration-1000"></span>
+
+              <span className="relative flex items-center justify-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 xs:h-6 xs:w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                  />
+                </svg>
+                Buy Product
+              </span>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -71,6 +131,10 @@ export default function HeroSection() {
 
         .animation-delay-400 {
           animation-delay: 0.4s;
+        }
+
+        .animation-delay-600 {
+          animation-delay: 0.6s;
         }
       `}</style>
     </div>

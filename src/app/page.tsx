@@ -20,10 +20,10 @@ export default function Home() {
       <Achievements />
       <MediaSpotlight />
       <Catalogue />
-      <MEMBER />
+      {/* <MEMBER /> */}
       <Blog />
+      <BecomeAMember  />
       <WhyChooseUs />
-      <BecomeAMember />
     </>
   );
 }
